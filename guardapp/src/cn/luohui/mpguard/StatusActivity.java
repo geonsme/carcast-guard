@@ -31,6 +31,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -67,10 +68,19 @@ public class StatusActivity extends Activity implements View.OnClickListener {
     private TextView btnCheck;
     private TextView btnToggle;
     private ImageButton btnJump;
+    private TextView updateVersion;
+    private TextView updateHint;
+    private TextView btnUpdate;
 
     private TargetCard svenCard;
     private TargetCard netaCard;
     private final List<CondRow> condRows = new ArrayList<CondRow>();
+
+    private UpdateChecker.ReleaseInfo availableRelease;
+    private File pendingUpdateApk;
+    private boolean updateBusy;
+    private boolean installLaunched;
+    private boolean awaitingInstallPermission;
 
     private final Handler h = new Handler(Looper.getMainLooper());
     private boolean busy;
@@ -93,6 +103,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         setupTargets();
         setupConditions();
         setupClicks();
+        updateVersion.setText(getString(R.string.update_current, UpdateChecker.currentVersion(this)));
         loadLastAction();
         startPulse();
 
@@ -128,6 +139,9 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         btnCheck = (TextView) findViewById(R.id.btnCheck);
         btnToggle = (TextView) findViewById(R.id.btnToggle);
         btnJump = (ImageButton) findViewById(R.id.btnJump);
+        updateVersion = (TextView) findViewById(R.id.updateVersion);
+        updateHint = (TextView) findViewById(R.id.updateHint);
+        btnUpdate = (TextView) findViewById(R.id.btnUpdate);
     }
 
     private void setupTargets() {
@@ -205,6 +219,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         btnCheck.setOnClickListener(this);
         btnJump.setOnClickListener(this);
         btnToggle.setOnClickListener(this);
+        btnUpdate.setOnClickListener(this);
     }
 
     private void autoRepairIfNeeded() {
@@ -231,6 +246,8 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         } else if (v == btnToggle) {
             if (Rearm.userDisabled(this)) enableGuard();
             else showStopDialog();
+        } else if (v == btnUpdate) {
+            onUpdateClicked();
         }
     }
 
@@ -333,6 +350,179 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         h.postDelayed(new Runnable() {
             @Override public void run() { render(false); }
         }, 1400);
+    }
+
+    // ---------- 应用更新 ----------
+
+    private void onUpdateClicked() {
+        if (updateBusy) return;
+        if (pendingUpdateApk != null && pendingUpdateApk.isFile()) {
+            if (UpdateChecker.canInstall(this)) {
+                installLaunched = false;
+                launchInstaller();
+            } else {
+                showInstallPermDialog();
+            }
+            return;
+        }
+        if (availableRelease != null) {
+            showUpdateDialog(availableRelease);
+            return;
+        }
+        checkUpdate();
+    }
+
+    private void checkUpdate() {
+        updateBusy = true;
+        btnUpdate.setEnabled(false);
+        btnUpdate.setText(R.string.btn_checking);
+        updateHint.setText(R.string.update_checking);
+        UpdateChecker.check(this, new UpdateChecker.CheckCallback() {
+            @Override public void onResult(UpdateChecker.ReleaseInfo release, boolean newer) {
+                if (updateFinished()) return;
+                updateBusy = false;
+                btnUpdate.setEnabled(true);
+                if (newer) {
+                    availableRelease = release;
+                    updateHint.setText(getString(R.string.update_available, release.version));
+                    btnUpdate.setText(R.string.btn_update_now);
+                    showUpdateDialog(release);
+                } else {
+                    availableRelease = null;
+                    updateHint.setText(R.string.update_latest);
+                    btnUpdate.setText(R.string.btn_update);
+                    toast(getString(R.string.update_latest_toast, release.version));
+                }
+            }
+
+            @Override public void onError(String message) {
+                if (updateFinished()) return;
+                updateBusy = false;
+                btnUpdate.setEnabled(true);
+                btnUpdate.setText(R.string.btn_update);
+                updateHint.setText(R.string.update_failed);
+                toast(message);
+            }
+        });
+    }
+
+    private void showUpdateDialog(final UpdateChecker.ReleaseInfo release) {
+        String notes = release.notes == null ? "" : release.notes.trim();
+        if (notes.isEmpty()) {
+            notes = getString(R.string.dialog_update_empty);
+        } else if (notes.length() > 900) {
+            notes = notes.substring(0, 900) + "…";
+        }
+        String size = release.size > 0 ? UpdateChecker.humanBytes(release.size) : "未知大小";
+        String message = getString(R.string.dialog_update_msg,
+                UpdateChecker.currentVersion(this), release.version, size, notes);
+        final Dialog d = buildDialog(R.string.dialog_update_title, message);
+        TextView ok = (TextView) d.findViewById(R.id.dlgOk);
+        ok.setText(R.string.dialog_update_now);
+        ok.setBackgroundResource(R.drawable.bg_btn_primary);
+        ok.setTextColor(getColor(R.color.ink));
+        d.findViewById(R.id.dlgCancel).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { d.dismiss(); }
+        });
+        ok.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                d.dismiss();
+                startUpdateDownload(release);
+            }
+        });
+        present(d);
+    }
+
+    private void startUpdateDownload(final UpdateChecker.ReleaseInfo release) {
+        updateBusy = true;
+        btnUpdate.setEnabled(false);
+        btnUpdate.setText(R.string.btn_downloading);
+        updateHint.setText(getString(R.string.update_downloading_unknown, "0 B"));
+        UpdateChecker.download(this, release, new UpdateChecker.DownloadCallback() {
+            @Override public void onProgress(int pct, long done, long total) {
+                if (updateFinished()) return;
+                if (pct >= 0) {
+                    updateHint.setText(getString(R.string.update_downloading,
+                            pct, UpdateChecker.humanBytes(done)));
+                } else {
+                    updateHint.setText(getString(R.string.update_downloading_unknown,
+                            UpdateChecker.humanBytes(done)));
+                }
+            }
+
+            @Override public void onReady(File apk) {
+                if (updateFinished()) return;
+                updateBusy = false;
+                pendingUpdateApk = apk;
+                availableRelease = null;
+                btnUpdate.setEnabled(true);
+                btnUpdate.setText(R.string.btn_install_update);
+                updateHint.setText(R.string.update_install_ready);
+                installLaunched = false;
+                if (UpdateChecker.canInstall(StatusActivity.this)) {
+                    launchInstaller();
+                } else {
+                    showInstallPermDialog();
+                }
+            }
+
+            @Override public void onError(String message) {
+                if (updateFinished()) return;
+                updateBusy = false;
+                btnUpdate.setEnabled(true);
+                btnUpdate.setText(R.string.btn_retry_update);
+                updateHint.setText(R.string.update_failed);
+                toast(message);
+            }
+        });
+    }
+
+    private void launchInstaller() {
+        final File apk = pendingUpdateApk;
+        if (apk == null || !apk.isFile()) return;
+        installLaunched = true;
+        btnUpdate.setEnabled(false);
+        btnUpdate.setText(R.string.btn_waiting_install);
+        updateHint.setText(R.string.update_waiting_install);
+        try {
+            UpdateChecker.install(this, apk);
+        } catch (Exception e) {
+            installLaunched = false;
+            btnUpdate.setEnabled(true);
+            btnUpdate.setText(R.string.btn_install_update);
+            updateHint.setText(R.string.update_install_ready);
+            String detail = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            toast("无法启动安装 · " + detail);
+        }
+    }
+
+    private void showInstallPermDialog() {
+        final Dialog d = buildDialog(R.string.dialog_install_title,
+                getString(R.string.dialog_install_msg));
+        TextView ok = (TextView) d.findViewById(R.id.dlgOk);
+        ok.setText(R.string.dialog_install_go);
+        ok.setBackgroundResource(R.drawable.bg_btn_primary);
+        ok.setTextColor(getColor(R.color.ink));
+        d.findViewById(R.id.dlgCancel).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { d.dismiss(); }
+        });
+        ok.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                d.dismiss();
+                awaitingInstallPermission = true;
+                try {
+                    startActivity(UpdateChecker.installPermissionIntent(StatusActivity.this));
+                } catch (Exception e) {
+                    awaitingInstallPermission = false;
+                    toast("无法打开安装权限设置");
+                }
+            }
+        });
+        present(d);
+    }
+
+    private boolean updateFinished() {
+        return isFinishing() || isDestroyed();
     }
 
     private void setBusy(boolean v) {
@@ -760,6 +950,8 @@ public class StatusActivity extends Activity implements View.OnClickListener {
                 targetsContainer,
                 findViewById(R.id.sectionConditions),
                 conditionsContainer,
+                findViewById(R.id.sectionUpdate),
+                findViewById(R.id.updateCard),
                 findViewById(R.id.sectionLog),
                 findViewById(R.id.logCard),
                 findViewById(R.id.footer)
@@ -791,6 +983,26 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         if (refresher == null) refresher = new Refresher(this);
         h.removeCallbacks(refresher);
         h.postDelayed(refresher, 3000);
+
+        if (installLaunched) {
+            installLaunched = false;
+            if (pendingUpdateApk != null) {
+                btnUpdate.setEnabled(true);
+                btnUpdate.setText(R.string.btn_install_update);
+                updateHint.setText(R.string.update_install_ready);
+            }
+        }
+        if (awaitingInstallPermission && pendingUpdateApk != null
+                && pendingUpdateApk.isFile() && UpdateChecker.canInstall(this)) {
+            awaitingInstallPermission = false;
+            h.postDelayed(new Runnable() {
+                @Override public void run() {
+                    if (!updateFinished() && pendingUpdateApk != null && !installLaunched) {
+                        launchInstaller();
+                    }
+                }
+            }, 350);
+        }
     }
 
     @Override

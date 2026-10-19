@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="cn.luohui.mpguard"
-    android:versionCode="14"
-    android:versionName="1.14">
+    android:versionCode="11500"
+    android:versionName="1.15">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Android 11+ 包可见性：不声明就查不到其它应用的名字，
          也读不到 getEnabledAccessibilityServiceList() 的结果 -->
@@ -62,6 +64,10 @@
         <receiver
             android:name=".RearmAlarmReceiver"
             android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".InstallResultReceiver"
             android:exported="false" />
 
         <receiver

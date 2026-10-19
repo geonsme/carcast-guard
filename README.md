@@ -60,12 +60,15 @@
 │   │   ├── BootReceiver.java      # BOOT_COMPLETED 兜底
 │   │   ├── NetaKeeper.java        # 哪吒 MQTT 绑定/心跳/掉线重绑
 │   │   ├── GuardWidgetProvider.java # 2×1 桌面状态磁贴
+│   │   ├── UpdateChecker.java     # Release 检查/下载/签名校验/安装
+│   │   ├── VersionUtil.java       # 语义版本归一化与比较
+│   │   ├── InstallResultReceiver.java # PackageInstaller 结果回执
 │   │   ├── ProtectionGaugeView.java # 270° 自定义守护指数仪表
 │   │   ├── BackdropView.java      # 深炭黑底 + 光晕 + 网格背景
 │   │   └── StatusActivity.java    # 状态页：守护指数/目标卡/系统条件/动作
 │   ├── build.sh                   # 跨平台构建：本地 Windows / Actions Linux
 │   ├── render_preview.js          # 图标矢量栅格化预览
-│   └── mp-guard.apk               # 已签名成品（v1.14，约 0.5 MB，含字体）
+│   └── mp-guard.apk               # 已签名成品（v1.15，约 0.52 MB，含字体）
 ├── mp_guard.sh                    # shell 级兜底守护（设备端，需 adb）
 ├── rearm.sh                       # 电脑端一条命令恢复（含哪吒钉权）
 ├── verify_after_reboot.sh         # 重启后逐项核对（双通道 38 项）
@@ -78,7 +81,8 @@
 
 ## 3. 车控守护 App
 
-包名 `cn.luohui.mpguard`，自签，约 0.5 MB（v1.14 新增直连哪吒心跳的第二路闹钟与 2×1 桌面磁贴），**无网络权限**。
+包名 `cn.luohui.mpguard`，自签，约 0.52 MB。v1.15 新增应用内更新与 ColorOS 2×1 标准磁贴；
+网络权限只用于访问 GitHub Release 检查/下载更新，不上传任何本地数据。
 v1.12 起同时承担两条链路：投屏宝无障碍自愈 + 哪吒汽车后台保活；v1.13 加入 Doze 兜底；
 v1.14 把兜底拆成“守护自愈”与“直连哪吒”两路，并实测排除了 `BIND_ABOVE_CLIENT` 方案。
 
@@ -163,12 +167,24 @@ GuardService（系统绑定，常驻）
 - 约束：RemoteViews 不支持自定义表盘、字体和动画，所以磁贴只做状态摘要；系统对桌面刷新有节流，状态最多滞后一个刷新周期。
 - 1×1 版本已在 ColorOS 16 实机添加并验证：点击进入 `StatusActivity`，安装后核对 38/38；2×1 版本已重新构建，待实机安装确认。尺寸变更后需移除旧磁贴再重新添加。
 
-### 3.6 图标与视觉
+### 3.6 应用内更新（v1.15）
+
+状态页新增「应用更新」卡片：点击「检查更新」后匿名请求 GitHub `releases/latest`，把 `tag_name`
+归一化后与本地 `versionName` 逐段比较；只有远端版本更高才提示下载。
+
+- Release 附件必须是 `.apk`。下载写入应用缓存，通过 `PackageInstaller` 会话安装，不需要存储权限。
+- 安装前校验三项：包名一致、`versionCode` 高于当前版本、签名证书字节与已安装包一致；任一项不符即删除并拒绝安装。
+- 首次安装需允许「安装未知应用」（`REQUEST_INSTALL_PACKAGES`）；App 内会引导到系统开关，也可用
+  `adb shell cmd appops set cn.luohui.mpguard REQUEST_INSTALL_PACKAGES allow` 预授权。
+- 检查/下载都在后台线程，失败只更新卡片提示或 Toast，不影响守护主链路；更新源要求仓库与 Release 公开。
+- 覆盖安装后 `MY_PACKAGE_REPLACED` 会触发自愈，原有双通道会重新登记。
+
+### 3.7 图标与视觉
 
 深炭黑 `#080A0A` + 柠檬绿 `#C7F86F` 主色，琥珀 `#FFC46B` 与珊瑚 `#FF7A6B` 分级告警；
 数字与拉丁小标使用 Rajdhani（OFL），背景为网格 + 双光晕，母题为盾牌 + 对勾。
 
-### 3.7 REA 对哪吒 APK 的静态核对
+### 3.8 REA 对哪吒 APK 的静态核对
 
 用 REA 6.7.0（JADX headless 0.7.1 解码 Manifest）对本地包体 `com.hezhong.nezha.apk`
 （6.4.3 / versionCode 163，targetSdk 32，SHA-256 `80eed409…f6d79f`）做了核对。
@@ -260,6 +276,7 @@ bash rearm.sh
 adb shell pm grant cn.luohui.mpguard android.permission.WRITE_SECURE_SETTINGS
 adb shell cmd appops set cn.luohui.mpguard BACKGROUND_START_ACTIVITY allow
 adb shell cmd appops set cn.luohui.mpguard SCHEDULE_EXACT_ALARM allow
+adb shell cmd appops set cn.luohui.mpguard REQUEST_INSTALL_PACKAGES allow
 for op in RUN_ANY_IN_BACKGROUND START_FOREGROUND WAKE_LOCK; do
   adb shell cmd appops set cn.luohui.mpguard $op allow
 done
@@ -298,6 +315,9 @@ adb shell am set-standby-bucket com.hezhong.nezha 5
 - **每次 push**（任意分支）：构建 APK，上传为 Actions artifact，命名 `mp-guard-<短 SHA>.apk`。
 - **打 tag**（`v1.15`、`v1.15.1`）：额外创建 GitHub Release，附件为 `mp-guard-<tag>.apk`，
   并用 tag 自动改写 `versionName` 与 `versionCode`（`1.15` → `11500`），无需手工改 Manifest。
+- 仓库必须为 **public**：App 内更新以匿名身份读取 `releases/latest` 和下载附件；私有仓库会 404。
+  Release 不能是 draft / prerelease，否则不会被 `latest` 返回。
+- 更新包由 App 校验签名；CI 必须继续使用同一把 keystore，否则会被拒绝安装。
 - Release 产物使用仓库 Secrets 中的同一把签名密钥，签名与已安装版本一致，可直接覆盖安装：
   - `MPGUARD_KS_BASE64`：`guardapp/mpguard.ks` 的 Base64
   - `MPGUARD_KS_PASS` / `MPGUARD_KEY_PASS`：keystore 与 key 密码
@@ -318,6 +338,8 @@ adb shell am set-standby-bucket com.hezhong.nezha 5
 - **`PROJECT_MEDIA` 一旦被点「拒绝」即回到 `ignore`**，守护会把开关补回去，但那个动作本身要避免。
 - 守护 App 持有 `WRITE_SECURE_SETTINGS` 且作为无障碍服务**有能力读取全屏内容**——这是实现开机自愈的必要代价。不需要时直接卸载，不影响「车机投屏宝」与「哪吒汽车」本身。
 - 哪吒 App 未安装时，其目标卡显示未安装，守护逻辑自动跳过，不影响投屏宝链路。
+- **应用内更新依赖 GitHub 可达性**：网络不通或 API 限流时只会提示检查失败，不影响已有守护；
+  首次内部安装需要用户允许「安装未知应用」，或通过 adb 预授权。
 - MuMu 模拟器作为车机端**未打通端到端连接**：桥接在 Hyper-V 引擎下会使 VM 无法启动；且办公网跨 VLAN 存在隔离。详见测试手册。
 
 ## 8. 方法论与证据分级

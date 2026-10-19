@@ -73,6 +73,9 @@ done
 A shell "cmd appops set $SELF_PKG SCHEDULE_EXACT_ALARM allow" >/dev/null 2>&1 \
   && echo "SCHEDULE_EXACT_ALARM 已授予（10 分钟精确兜底）" \
   || echo "提示: 精确闹钟未授予，将退化为非精确兜底"
+A shell "cmd appops set $SELF_PKG REQUEST_INSTALL_PACKAGES allow" >/dev/null 2>&1 \
+  && echo "REQUEST_INSTALL_PACKAGES 已授予（App 内更新可静默进入安装器）" \
+  || echo "提示: 安装未知应用未预授权，首次内部更新需在系统弹窗中允许"
 
 echo "== 4) Doze 白名单 / 待机桶 =="
 for p in "$SVEN_PKG" "$NEZHA" "$SELF_PKG"; do
