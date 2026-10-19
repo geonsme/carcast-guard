@@ -8,7 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.widget.RemoteViews;
 
-/** 1×1 桌面状态磁贴：只显示总守护状态，点击进入控制台。 */
+/** 2×1 桌面状态磁贴：只显示总守护状态，点击进入控制台。 */
 public class GuardWidgetProvider extends AppWidgetProvider {
 
     @Override

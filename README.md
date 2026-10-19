@@ -41,6 +41,7 @@
 .
 ├── README.md
 ├── .gitignore
+├── .github/workflows/android.yml  # push 构建 APK；打 v* tag 自动发布 Release
 ├── guardapp/                      # 自研守护 App 源码（Java，无 Gradle 手工构建）
 │   ├── AndroidManifest.xml
 │   ├── res/
@@ -58,11 +59,11 @@
 │   │   ├── RearmAlarmReceiver.java# 闹钟触发：自愈 + 重绑 + 续期
 │   │   ├── BootReceiver.java      # BOOT_COMPLETED 兜底
 │   │   ├── NetaKeeper.java        # 哪吒 MQTT 绑定/心跳/掉线重绑
-│   │   ├── GuardWidgetProvider.java # 1×1 桌面状态磁贴
+│   │   ├── GuardWidgetProvider.java # 2×1 桌面状态磁贴
 │   │   ├── ProtectionGaugeView.java # 270° 自定义守护指数仪表
 │   │   ├── BackdropView.java      # 深炭黑底 + 光晕 + 网格背景
 │   │   └── StatusActivity.java    # 状态页：守护指数/目标卡/系统条件/动作
-│   ├── build.sh                   # aapt2 + javac + d8 + zipalign + apksigner
+│   ├── build.sh                   # 跨平台构建：本地 Windows / Actions Linux
 │   ├── render_preview.js          # 图标矢量栅格化预览
 │   └── mp-guard.apk               # 已签名成品（v1.14，约 0.5 MB，含字体）
 ├── mp_guard.sh                    # shell 级兜底守护（设备端，需 adb）
@@ -77,7 +78,7 @@
 
 ## 3. 车控守护 App
 
-包名 `cn.luohui.mpguard`，自签，约 0.5 MB（v1.14 新增直连哪吒心跳的第二路闹钟与 1×1 桌面磁贴），**无网络权限**。
+包名 `cn.luohui.mpguard`，自签，约 0.5 MB（v1.14 新增直连哪吒心跳的第二路闹钟与 2×1 桌面磁贴），**无网络权限**。
 v1.12 起同时承担两条链路：投屏宝无障碍自愈 + 哪吒汽车后台保活；v1.13 加入 Doze 兜底；
 v1.14 把兜底拆成“守护自愈”与“直连哪吒”两路，并实测排除了 `BIND_ABOVE_CLIENT` 方案。
 
@@ -152,15 +153,15 @@ GuardService（系统绑定，常驻）
 - **交互**：每 3 秒自动刷新；「立即自愈」「检测」「重绑哪吒」「停用/启用守护」均有 Toast + 事件日志 + 整页重算
 - **权限引导**：缺 `WRITE_SECURE_SETTINGS` 时弹出可复制的 ADB 命令，不把用户丢进设置页
 
-### 3.5 桌面 1×1 状态磁贴（v1.14）
+### 3.5 桌面 2×1 状态磁贴（v1.14）
 
-`GuardWidgetProvider` 提供一个标准 App Widget，占桌面 **1×1** 格，只保留盾牌图标 + 一行状态，点击进入控制台。
+`GuardWidgetProvider` 提供一个标准 App Widget，占桌面 **2×1** 格（ColorOS 16 常规卡片档位），保留盾牌图标 + 一行状态，点击进入控制台；背景 90% 不透明度，透出少量壁纸。
 
 - 状态优先级：已停用（灰）→ 待授权（珊瑚）→ 待激活（珊瑚）→ 仅投屏（琥珀）→ 重连中（琥珀）→ 守护中（柠檬绿）。
 - 刷新：系统 `updatePeriodMillis` 每 30 分钟一次；App 内每次状态重绘、自愈、启停、重绑，以及哪吒绑定连上/断开时都会主动 `refresh()`。
 - 添加方式：长按桌面空白处 → 「卡片」→ 在「全部卡片」里找到「车控守护」添加（卡片中心搜索按中文匹配，拼音搜不到）。
 - 约束：RemoteViews 不支持自定义表盘、字体和动画，所以磁贴只做状态摘要；系统对桌面刷新有节流，状态最多滞后一个刷新周期。
-- 已在 ColorOS 16 实机添加并验证：1×1 显示「守护中」，点击进入 `StatusActivity`；安装后核对 38/38 全过。
+- 1×1 版本已在 ColorOS 16 实机添加并验证：点击进入 `StatusActivity`，安装后核对 38/38；2×1 版本已重新构建，待实机安装确认。尺寸变更后需移除旧磁贴再重新添加。
 
 ### 3.6 图标与视觉
 
@@ -232,12 +233,16 @@ GuardService（系统绑定，常驻）
 
 ```bash
 cd guardapp
-# 修改 build.sh 顶部的 SDK / AJ / BT 为本机路径
 bash build.sh
-# 产物：guardapp/mp-guard.apk（约 519 KB，已签名）
+# 产物：guardapp/mp-guard.apk（约 0.5 MB，已签名）
 ```
 
-签名使用本地 `guardapp/mpguard.ks`（已在 `.gitignore` 中）。
+`build.sh` 会自动读取 `ANDROID_SDK_ROOT` / `ANDROID_HOME`，也兼容本机默认 SDK 路径与
+`build-tools/33.0.1`；可用 `ANDROID_BUILD_TOOLS`、`ANDROID_JAR` 显式覆盖。
+Windows 与 Linux 共用同一脚本，本机与 GitHub Actions 的构建命令一致。
+
+签名使用本地 `guardapp/mpguard.ks`（已在 `.gitignore` 中）。密码可用
+`MPGUARD_KS_PASS`、`MPGUARD_KEY_PASS`、`MPGUARD_KEY_ALIAS` 覆盖。
 **换签名后无法覆盖安装旧包**，`adb install -r` 报签名不一致时需先卸载。
 
 ### 6.3 安装与一次性授权
@@ -284,6 +289,20 @@ adb shell am set-standby-bucket com.hezhong.nezha 5
 - 手机端：点一下桌面「车控守护」图标（Activity 启动即自愈并重新绑定哪吒）
 - 电脑端：`bash rearm.sh`
 - 重启后体检：`bash verify_after_reboot.sh`（38 项，覆盖双通道）
+
+### 6.5 GitHub Actions 与发布
+
+工作流：`.github/workflows/android.yml`，在 Ubuntu runner 上安装 JDK 17 与 Android SDK
+（`platforms;android-33` + `build-tools;33.0.1`），直接调用同一个 `guardapp/build.sh`。
+
+- **每次 push**（任意分支）：构建 APK，上传为 Actions artifact，命名 `mp-guard-<短 SHA>.apk`。
+- **打 tag**（`v1.15`、`v1.15.1`）：额外创建 GitHub Release，附件为 `mp-guard-<tag>.apk`，
+  并用 tag 自动改写 `versionName` 与 `versionCode`（`1.15` → `11500`），无需手工改 Manifest。
+- Release 产物使用仓库 Secrets 中的同一把签名密钥，签名与已安装版本一致，可直接覆盖安装：
+  - `MPGUARD_KS_BASE64`：`guardapp/mpguard.ks` 的 Base64
+  - `MPGUARD_KS_PASS` / `MPGUARD_KEY_PASS`：keystore 与 key 密码
+  - `MPGUARD_KEY_ALIAS` 可选，默认 `mpguard`
+- 触发发布：`git tag v1.15 && git push origin v1.15`。
 
 ## 7. 已知限制
 
