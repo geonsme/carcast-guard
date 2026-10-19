@@ -1,35 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widgetRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_widget_tile"
-    android:gravity="center"
-    android:orientation="horizontal"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="14dp">
 
-    <ImageView
-        android:id="@+id/widgetIcon"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
-        android:contentDescription="@null"
-        android:src="@drawable/ic_shield"
-        android:tint="@color/widget_accent" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/widgetIcon"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_shield"
+            android:tint="@color/widget_accent" />
+
+        <TextView
+            android:id="@+id/widgetStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="守护中"
+            android:textColor="@color/widget_accent"
+            android:textSize="13sp" />
+    </LinearLayout>
 
     <TextView
-        android:id="@+id/widgetStatus"
+        android:id="@+id/widgetTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:ellipsize="end"
+        android:layout_gravity="top|end"
         android:fontFamily="sans-serif-medium"
-        android:gravity="center"
         android:includeFontPadding="false"
-        android:maxLines="1"
-        android:text="守护中"
-        android:textColor="@color/widget_accent"
-        android:textSize="12sp" />
-</LinearLayout>
+        android:text="20:15"
+        android:textColor="@color/widget_muted"
+        android:textSize="10sp" />
+</FrameLayout>

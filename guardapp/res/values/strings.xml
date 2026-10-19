@@ -64,7 +64,7 @@
     <string name="btn_settings">无障碍设置</string>
 
     <string name="privacy_note">本地运行 · 不采集数据</string>
-    <string name="widget_desc">2×1 状态磁贴：一眼查看双通道守护状态，点击进入控制台</string>
+    <string name="widget_desc">2×2 状态磁贴：一眼查看双通道守护状态与最近更新时间，点击进入控制台</string>
     <string name="log_waiting">等待首次操作</string>
     <string name="log_auto">自动体检 · 每 15 分钟</string>
 

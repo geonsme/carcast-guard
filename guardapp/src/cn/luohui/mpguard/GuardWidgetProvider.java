@@ -8,7 +8,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.widget.RemoteViews;
 
-/** 2×1 桌面状态磁贴：只显示总守护状态，点击进入控制台。 */
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+/** 2×2 桌面状态磁贴：总守护状态 + 最近更新时间，点击进入控制台。 */
 public class GuardWidgetProvider extends AppWidgetProvider {
 
     @Override
@@ -45,11 +49,15 @@ public class GuardWidgetProvider extends AppWidgetProvider {
         else if (!netaBound) { text = "重连中"; color = ctx.getColor(R.color.widget_warn); }
         else { text = "守护中"; color = ctx.getColor(R.color.widget_accent); }
 
+        String time = new SimpleDateFormat("HH:mm", Locale.getDefault())
+                .format(new Date());
+
         RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_guard);
         rv.setTextViewText(R.id.widgetStatus, text);
         rv.setTextColor(R.id.widgetStatus, color);
+        rv.setTextViewText(R.id.widgetTime, time);
         rv.setInt(R.id.widgetIcon, "setColorFilter", color);
-        rv.setContentDescription(R.id.widgetRoot, "车控守护，" + text);
+        rv.setContentDescription(R.id.widgetRoot, "车控守护，" + text + "，更新于 " + time);
 
         Intent open = new Intent(ctx, StatusActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
