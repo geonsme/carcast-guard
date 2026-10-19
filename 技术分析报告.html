@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>车机投屏宝 · 技术分析报告</title>
+<style>
+:root{
+  --bg:#101214; --panel:#17191c; --panel2:#1e2022; --line:#2c3034;
+  --ink:#e8eaed; --dim:#9aa0a6; --faint:#6b7178;
+  --g1:#84d87b; --g2:#baf974; --g3:#5b8557;
+  --warn:#ffb74d; --err:#e57373; --info:#64b5f6;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.75 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}
+code,.mono{font-family:"JetBrains Mono",Consolas,"Cascadia Mono",monospace;font-size:.9em}
+a{color:var(--g2)}
+.wrap{display:grid;grid-template-columns:230px 1fr;gap:0;max-width:1400px;margin:0 auto}
+nav{position:sticky;top:0;align-self:start;height:100vh;padding:26px 18px;border-right:1px solid var(--line);overflow:auto}
+nav h4{margin:0 0 14px;font-size:12px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+nav a{display:block;color:var(--dim);text-decoration:none;padding:6px 10px;border-radius:7px;font-size:13.5px}
+nav a:hover{background:var(--panel2);color:var(--ink)}
+nav a.on{background:linear-gradient(90deg,rgba(132,216,123,.16),transparent);color:var(--g2);box-shadow:inset 2px 0 0 var(--g1)}
+main{padding:34px 40px 110px;min-width:0}
+header.hero{padding:26px 28px;border-radius:16px;background:
+  radial-gradient(900px 300px at 12% -30%,rgba(186,249,116,.14),transparent),
+  linear-gradient(160deg,#1a1d20,#141618);border:1px solid var(--line);margin-bottom:26px}
+h1{margin:0 0 8px;font-size:29px;letter-spacing:-.5px}
+h1 .grad{background:linear-gradient(100deg,var(--g1),var(--g2) 55%,var(--g3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--dim);font-size:13.5px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:12px;color:var(--dim)}
+.chip b{color:var(--g2);font-weight:600}
+section{margin:38px 0;scroll-margin-top:20px}
+h2{font-size:20px;margin:0 0 6px;display:flex;align-items:center;gap:10px}
+h2::before{content:"";width:4px;height:19px;border-radius:3px;background:linear-gradient(var(--g1),var(--g2))}
+h2 .n{color:var(--faint);font-size:13px;font-weight:400}
+.lead{color:var(--dim);margin:0 0 18px;font-size:14px}
+h3{font-size:15.5px;margin:24px 0 10px;color:var(--g2)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:18px 20px}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:16px 18px}
+.kpi .t{font-size:12px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase}
+.kpi .v{font-size:26px;font-weight:700;margin:4px 0 6px;background:linear-gradient(100deg,var(--g1),var(--g2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.kpi .d{font-size:12.5px;color:var(--dim);line-height:1.6}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 4px}
+th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--faint);font-weight:600;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;background:var(--panel2)}
+tbody tr:hover{background:#1b1e21}
+td code{background:#0d0f11;border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:var(--g2);word-break:break-all}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid;font-weight:600;white-space:nowrap}
+.tag.p{color:var(--g2);border-color:rgba(186,249,116,.35);background:rgba(186,249,116,.08)}
+.tag.c{color:var(--info);border-color:rgba(100,181,246,.35);background:rgba(100,181,246,.08)}
+.tag.both{color:var(--warn);border-color:rgba(255,183,77,.32);background:rgba(255,183,77,.08)}
+.tag.ev{color:#a5d6a7;border-color:rgba(165,214,167,.3);background:rgba(165,214,167,.08)}
+.tag.inf{color:#ce93d8;border-color:rgba(206,147,216,.3);background:rgba(206,147,216,.08)}
+.bar{height:22px;border-radius:5px;background:linear-gradient(90deg,var(--g1),var(--g2));min-width:2px}
+.bar.b2{background:linear-gradient(90deg,#3d6ea8,var(--info))}
+.bar.b3{background:linear-gradient(90deg,#6a5a8a,#a1887f)}
+.barrow{display:grid;grid-template-columns:110px 1fr 62px;gap:11px;align-items:center;margin:9px 0;font-size:13px}
+.barrow .lab{color:var(--dim)}
+.bartrack{background:#0d0f11;border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+.barrow .num{text-align:right;color:var(--g2);font-variant-numeric:tabular-nums}
+.flow{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:16px;overflow-x:auto}
+svg text{font-family:inherit}
+.risk{border-left:3px solid var(--err);background:linear-gradient(90deg,rgba(229,115,117,.09),transparent);
+  padding:13px 16px;border-radius:0 10px 10px 0;margin:11px 0}
+.risk.mid{border-left-color:var(--warn);background:linear-gradient(90deg,rgba(255,183,77,.08),transparent)}
+.risk.low{border-left-color:var(--g1);background:linear-gradient(90deg,rgba(132,216,123,.07),transparent)}
+.risk b{display:block;margin-bottom:3px}
+.risk span{color:var(--dim);font-size:13px}
+pre{background:#0b0d0f;border:1px solid var(--line);border-radius:9px;padding:12px 14px;overflow-x:auto;
+  font-size:12.5px;color:#c5e1a5;margin:8px 0}
+details{border:1px solid var(--line);border-radius:10px;background:var(--panel2);margin:9px 0;overflow:hidden}
+summary{cursor:pointer;padding:11px 15px;font-size:13.5px;color:var(--dim);user-select:none;list-style:none}
+summary::before{content:"▸ ";color:var(--g1)}
+details[open] summary::before{content:"▾ "}
+details[open] summary{border-bottom:1px solid var(--line);color:var(--ink)}
+.body{padding:12px 16px;font-size:13.5px}
+.pill{display:inline-flex;gap:6px;align-items:center;background:var(--panel2);border:1px solid var(--line);
+  border-radius:8px;padding:5px 11px;font-size:12.5px;color:var(--dim);margin:3px 4px 3px 0}
+.pill b{color:var(--ink);font-weight:600;white-space:nowrap;flex-shrink:0}
+.note{font-size:12.5px;color:var(--faint);margin-top:9px}
+footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);color:var(--faint);font-size:12.5px}
+.toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:0 0 16px;
+  position:sticky;top:0;background:var(--bg);padding:12px 0;z-index:5;border-bottom:1px solid var(--line)}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:8px;
+  padding:6px 13px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.btn:hover{color:var(--ink);border-color:var(--g3)}
+.btn.on{background:linear-gradient(100deg,rgba(132,216,123,.2),rgba(186,249,116,.1));color:var(--g2);border-color:var(--g3)}
+body.hide-inf .inf{display:none}
+body.hide-inf .tag.ev{opacity:.55}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}nav{display:none}main{padding:22px 16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav id="nav">
+  <h4>目录</h4>
+  <a href="#s1">01 结论速览</a>
+  <a href="#s2">02 取证方法</a>
+  <a href="#s3">03 架构与数据流</a>
+  <a href="#s4">04 组件结构差异</a>
+  <a href="#s5">05 功能矩阵</a>
+  <a href="#s6">06 传输与编解码</a>
+  <a href="#s7">07 提权链路</a>
+  <a href="#s8">08 抢单引擎</a>
+  <a href="#s9">09 scrcpy 移植</a>
+  <a href="#s10">10 安全面评估</a>
+  <a href="#s11">11 证据可信度</a>
+  <a href="#s12">12 落点与建议</a>
+</nav>
+<main>
+
+<header class="hero">
+  <h1>车机投屏宝 <span class="grad">技术分析报告</span></h1>
+  <div class="sub">手机端 / 车机端 双角色实现差异 · 架构逆向 · 安全面评估</div>
+  <div class="meta">
+    <span class="chip">包名 <b>com.sven.mycar</b></span>
+    <span class="chip">版本 <b>23.9.70 (23970)</b></span>
+    <span class="chip">体积 <b>45,370,367 B</b></span>
+    <span class="chip">SHA256 <b>1b554923…f8f998</b></span>
+    <span class="chip">样本机 <b>OnePlus 12 / ColorOS 16 / SDK 36</b></span>
+    <span class="chip">日期 <b>2026-10-09</b></span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <button class="btn" id="tg">◐ 只看已证实（隐藏推断）</button>
+  <span class="note">标注 <span class="tag ev">已证实</span> 的条目有原始字符串 / smali / 设备实测支撑；<span class="tag inf">推断</span> 表示未拿到分支代码。</span>
+</div>
+
+<section id="s1">
+  <h2>01 · 结论速览 <span class="n">TL;DR</span></h2>
+  <p class="lead">一句话：<b>它不是投屏工具，是网约车司机的车机多开接单工作台</b>；投屏只是承载手段，而手机端与车机端是同一 APK 的两个互补角色。</p>
+  <div class="grid g3">
+    <div class="kpi"><div class="t">角色分工</div><div class="v">编码 → 解码</div><div class="d">手机端 <code>PhoneCastVideoCoder</code> 编码，车机端 <code>car.cast.MyVideoDecoder</code> 解码。手机采集被控，车机渲染控制。</div></div>
+    <div class="kpi"><div class="t">提权方向</div><div class="v">车机是 ADB 客户端</div><div class="d">车机端内置 <code>adblib.AdbProtocol</code> + <code>AdbKeyPair</code>，主动 RSA 认证连手机的 5555；电脑"激活工具"只执行 <code>adb tcpip 5555</code>。</div></div>
+    <div class="kpi"><div class="t">自研程度</div><div class="v">移植 scrcpy</div><div class="d"><code>commoncast.scrcpy</code> 包内是 scrcpy 的 Java 侧代码：坐标换算、多点触控、视频裁剪均非自研。</div></div>
+    <div class="kpi"><div class="t">真实用途</div><div class="v">接单工作台</div><div class="d">字段 <code>taxiPackageName</code>、<code>DiDiOrderInfoBean</code>、<code>RobotOrderOcrBean</code>、载客 TTS 文案，构成完整的抢单链路。</div></div>
+    <div class="kpi"><div class="t">代码保护</div><div class="v">SecShell 剥 class_defs</div><div class="d">classes.dex 仅 640 个类定义且无 <code>com.sven.*</code>；但 <code>hh.jar</code>（提权服务）完全裸奔，2430 类可反编译。</div></div>
+    <div class="kpi"><div class="t">最高风险</div><div class="v">无认证 adbd</div><div class="d"><code>tcpip 5555</code> 后 adbd 无二次认证，而连接指引恰是"车机连手机热点"——同网段即等于拿到手机 shell。</div></div>
+  </div>
+</section>
+
+<section id="s2">
+  <h2>02 · 取证方法与工具链</h2>
+  <p class="lead">受 SecShell 保护限制，采用"多入口交叉验证"：清单、字符串表、裸 dex、设备运行时四条独立证据链。</p>
+  <table>
+    <thead><tr><th>手段</th><th>拿到了什么</th><th>局限</th></tr></thead>
+    <tbody>
+      <tr><td><code>dumpsys package</code> 设备实测</td><td>真实权限授予态、组件、签名、安装来源、进程</td><td>只见运行时结果，不见逻辑</td></tr>
+      <tr><td>apktool 2.10.0 解码清单</td><td>178 个组件及其 launchMode / configChanges / theme / exported</td><td>—</td></tr>
+      <tr><td>自研 Node dex 解析器</td><td>证明 class_defs 被剥离；解析 hh.jar 内 2430 个类</td><td>主 dex 类结构不可得</td></tr>
+      <tr><td>dex 字符串表分析（MUTF-8 中文明文）</td><td>协议字段、类名、方法名、日志文案、功能约束</td><td>无法确定分支条件</td></tr>
+      <tr><td><code>uiautomator dump</code> + 截图</td><td>App 真实界面文案与可点击项</td><td>锁屏时失效</td></tr>
+      <tr><td>下载 <code>adb_active_tool.zip</code></td><td>激活脚本原文（决定性）</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <div class="risk mid"><b>过程中的两次自我纠正</b>
+    <span>① 曾依据 <code>dex\n035</code> 明文头误判"未加固"，实测 class_defs 后推翻。② 曾误判"提权由手机端发起"，发现车机端 <code>adblib</code> 后修正为车机侧发起。</span></div>
+</section>
+
+<section id="s3">
+  <h2>03 · 架构与数据流</h2>
+  <p class="lead">视频与触控构成一个闭环：画面单向上传，操作反向回注。</p>
+  <div class="flow">
+  <svg viewBox="0 0 1120 400" width="100%" style="height:auto;display:block" role="img" aria-label="手机端与车机端数据流">
+    <defs>
+      <linearGradient id="gl" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#84d87b"/><stop offset=".55" stop-color="#baf974"/><stop offset="1" stop-color="#5b8557"/>
+      </linearGradient>
+      <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#baf974"/>
+      </marker>
+      <marker id="ar2" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#64b5f6"/>
+      </marker>
+      <marker id="ar3" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#ffb74d"/>
+      </marker>
+    </defs>
+    <!-- phone -->
+    <rect x="16" y="18" width="420" height="364" rx="14" fill="#17191c" stroke="#2c3034"/>
+    <text x="36" y="48" fill="#baf974" font-size="16" font-weight="700">手机端 · 采集 / 编码 / 被控</text>
+    <g fill="#1e2022" stroke="#3a3f44">
+      <rect x="36" y="68" width="185" height="46" rx="8"/><rect x="233" y="68" width="185" height="46" rx="8"/>
+      <rect x="36" y="130" width="185" height="46" rx="8"/><rect x="233" y="130" width="185" height="46" rx="8"/>
+      <rect x="36" y="200" width="382" height="42" rx="8"/>
+      <rect x="36" y="258" width="185" height="46" rx="8"/><rect x="233" y="258" width="185" height="46" rx="8"/>
+    </g>
+    <g fill="#e8eaed" font-size="11.5">
+      <text x="48" y="88">单窗口采集</text><text x="48" y="104" fill="#9aa0a6">MediaProjection 需授权框</text>
+      <text x="245" y="88">多窗口采集</text><text x="245" y="104" fill="#9aa0a6">shell createVirtualDisplay</text>
+      <text x="48" y="150">PhoneCastVideoCoder</text><text x="48" y="166" fill="#9aa0a6">H.264 编码</text>
+      <text x="245" y="150">VirtualRenderManager</text><text x="245" y="166" fill="#9aa0a6">OpenGL 多窗口合成</text>
+      <text x="48" y="226">lancomm (Netty) + UDP 自研流控 · SPAKE2/AES-GCM</text>
+      <text x="48" y="278">adbserver.MyNewServer</text><text x="48" y="294" fill="#9aa0a6">shell uid 提权服务</text>
+      <text x="245" y="278">MyCarControlService</text><text x="245" y="294" fill="#9aa0a6">无障碍 + 自动点框</text>
+    </g>
+    <!-- car -->
+    <rect x="684" y="18" width="420" height="364" rx="14" fill="#17191c" stroke="#2c3034"/>
+    <text x="704" y="48" fill="#64b5f6" font-size="16" font-weight="700">车机端 · 解码 / 渲染 / 控制</text>
+    <g fill="#1e2022" stroke="#3a3f44">
+      <rect x="704" y="68" width="185" height="46" rx="8"/><rect x="901" y="68" width="185" height="46" rx="8"/>
+      <rect x="704" y="130" width="185" height="46" rx="8"/><rect x="901" y="130" width="185" height="46" rx="8"/>
+      <rect x="704" y="200" width="382" height="42" rx="8"/>
+      <rect x="704" y="258" width="185" height="46" rx="8"/><rect x="901" y="258" width="185" height="46" rx="8"/>
+    </g>
+    <g fill="#e8eaed" font-size="11.5">
+      <text x="716" y="88">car.cast.MyVideoDecoder</text><text x="716" y="104" fill="#9aa0a6">H.264 解码</text>
+      <text x="913" y="88">CarVideoCastActivity</text><text x="913" y="104" fill="#9aa0a6">上屏渲染</text>
+      <text x="716" y="150">CarCastWindowInfo</text><text x="716" y="166" fill="#9aa0a6">窗口几何 / 比例</text>
+      <text x="913" y="150">mScaleDetector</text><text x="913" y="166" fill="#9aa0a6">双指缩放本地计算</text>
+      <text x="716" y="226">CarService · CarPermissionRequestActivity</text>
+      <text x="716" y="278">CarDuoKaiFloatAppAdapter</text><text x="716" y="294" fill="#9aa0a6">多开选应用</text>
+      <text x="913" y="278">CarRobotOrderFloatManager</text><text x="913" y="294" fill="#9aa0a6">autoTouchForStartOrder</text>
+    </g>
+    <!-- connectors: 全部走中间 248px 空廊，标签不与方框重叠 -->
+    <path d="M436,90 L684,90" stroke="#ffb74d" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#ar3)"/>
+    <text x="560" y="80" fill="#ffb74d" font-size="11.5" text-anchor="middle">ADB 客户端 → tcp:5555</text>
+    <text x="560" y="106" fill="#9aa0a6" font-size="10.5" text-anchor="middle">车机拉起手机提权服务</text>
+
+    <path d="M436,152 C540,152 580,152 684,152" stroke="url(#gl)" stroke-width="2.6" fill="none" marker-end="url(#ar)"/>
+    <text x="560" y="142" fill="#baf974" font-size="11.5" text-anchor="middle">视频 + 音频 ↑</text>
+    <text x="560" y="168" fill="#9aa0a6" font-size="10.5" text-anchor="middle">H.264 / AAC over UDP</text>
+
+    <path d="M684,278 C580,278 540,278 436,278" stroke="#64b5f6" stroke-width="2.6" fill="none" marker-end="url(#ar2)"/>
+    <text x="560" y="268" fill="#64b5f6" font-size="11.5" text-anchor="middle">触控回注 ↓</text>
+    <text x="560" y="294" fill="#9aa0a6" font-size="10.5" text-anchor="middle">MyTouchBean → injectInputEvent</text>
+  </svg>
+  <div class="note">三条通道：ADB 提权（虚线，车机→手机）、媒体流（手机→车机）、触控回注（车机→手机）。多窗口路径下媒体流走 shell 进程，无需 MediaProjection 授权框。</div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><b style="color:var(--g2)">两条采集路径</b>
+      <div class="body" style="padding:8px 0 0">
+        <span class="pill"><b>单窗口</b> PhoneWholeCastActivity · MediaProjection · 需授权框 · 整屏压缩</span>
+        <span class="pill"><b>多窗口</b> MultiViewActivity · shell 虚拟屏 · 无授权框 · 按车机 dpi 布局</span>
+        <div class="note">两条路径的差异，同时决定了"画面大小"和"要不要点授权框"。</div>
+      </div>
+    </div>
+    <div class="card"><b style="color:var(--g2)">应用列表同步（多开闭环）</b>
+      <div class="body" style="padding:8px 0 0">
+        <span class="pill">手机枚举 <code>CarSyncAppInfoBean</code> + 图标</span>
+        <span class="pill">→ 车机 <code>CarDuoKaiFloatAppAdapter</code> 展示</span>
+        <span class="pill">→ 选中后 <code>startActivityAsUser</code> 拉到虚拟屏</span>
+        <div class="note">最后一步必须有 shell 权限，这就是"多窗口投屏"锁在 ADB 激活后的技术原因。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2>04 · 组件结构差异</h2>
+  <p class="lead">合计 178 个组件（136 activity / 20 service / 18 provider / 3 receiver），两端规模与取向明显不同。</p>
+  <div class="card">
+    <div class="barrow"><span class="lab">手机端</span><span class="bartrack"><span class="bar" style="width:38%"></span></span><span class="num">43</span></div>
+    <div class="barrow"><span class="lab">车机端</span><span class="bartrack"><span class="bar b2" style="width:19%"></span></span><span class="num">21</span></div>
+    <div class="barrow"><span class="lab">共享 / SDK</span><span class="bartrack"><span class="bar b3" style="width:100%"></span></span><span class="num">114</span></div>
+  </div>
+  <h3>组件类型分布</h3>
+  <table>
+    <thead><tr><th>维度</th><th>手机端</th><th>车机端</th><th>差异含义</th></tr></thead>
+    <tbody>
+      <tr><td>Activity</td><td>38</td><td>20</td><td>手机端承载商业化与教程引导，页面数近两倍</td></tr>
+      <tr><td>Service</td><td>4</td><td>1（CarService）</td><td>手机端需常驻（push / 无障碍 / 方向控制），车机端单前台服务</td></tr>
+      <tr><td>Provider</td><td>1</td><td>0</td><td>—</td></tr>
+      <tr><td><code>exported=true</code></td><td>9</td><td>2</td><td>车机端攻击面反而更小</td></tr>
+      <tr><td>主主题 AppTheme.MyCar</td><td>34</td><td>16</td><td>—</td></tr>
+      <tr><td>透明 / 悬浮主题</td><td>4</td><td>4</td><td>两端都用透明 Activity 做悬浮层与授权中转</td></tr>
+    </tbody>
+  </table>
+  <h3>launchMode 与 configChanges 取向</h3>
+  <div class="grid g2">
+    <div class="card"><b style="color:var(--g2)">手机端</b>
+      <div class="body" style="padding:6px 0 0">
+        <span class="pill"><b>singleInstance</b> ×4</span><span class="pill"><b>singleTop</b> ×2</span><span class="pill"><b>singleInstancePerTask</b> ×1</span>
+        <p style="margin:10px 0 0;color:var(--dim);font-size:13px"><code>PhoneWholeCastActivity</code> 用了全 Android 罕见的 <code>singleInstancePerTask</code>，并声明 11 项 <code>configChanges</code>（含 uiMode / smallestScreenSize / navigation / keyboard）—— 因为<b style="color:var(--ink)">重建等于断流</b>。</p>
+      </div></div>
+    <div class="card"><b style="color:var(--info)">车机端</b>
+      <div class="body" style="padding:6px 0 0">
+        <span class="pill"><b>singleTask</b> ×3</span><span class="pill"><b>singleTop</b> ×3</span><span class="pill"><b>singleInstance</b> ×1</span>
+        <p style="margin:10px 0 0;color:var(--dim);font-size:13px">车机是"长期驻留一屏"的形态，用 <code>singleTask</code> 复用任务栈省内存；7 个 Activity 统一声明三件套 <code>keyboardHidden|orientation|screenSize</code>。</p>
+      </div></div>
+  </div>
+  <div class="risk low"><b>有意思的一致点</b><span>两端<b>都没有任何 Activity 声明 <code>screenOrientation</code></b> —— 方向不静态锁定，而是运行时协商。这与手机端存在 <code>ChangeOrientationService</code>（且 exported=true）和 <code>ScreenDirectionChangedEvent</code> 相呼应。</span></div>
+</section>
+
+<section id="s5">
+  <h2>05 · 功能矩阵</h2>
+  <p class="lead">按"能力归属"而非页面数量划分，可直接看出两端的职责边界。</p>
+  <h3><span class="tag p">仅手机端</span></h3>
+  <table><tbody>
+    <tr><td style="width:150px">账号与商业化</td><td><code>LoginActivity</code> <code>LoginQRActivity</code> <code>WxLoginBean</code> <code>MemberInfoActivity</code> <code>BusinessActivity</code> <code>BusinessInviteQrCodeActivity</code> <code>ResetPayStateActivity</code> <code>PhoneWeChatKeFuActivity</code></td></tr>
+    <tr><td>采集与编码</td><td><code>PhoneCastVideoCoder</code> <code>PhoneWholeCastHelper</code> <code>PhoneScreenRecordHelper</code> <code>VirtualRenderManager</code></td></tr>
+    <tr><td>扫码发起</td><td><code>phone.view.scan.CustomScannerActivity</code>（手机端是扫码方）</td></tr>
+    <tr><td>保活与状态</td><td><code>KeepScreenUnlockActivity</code> <code>ChangeOrientationService</code> <code>PhoneService</code></td></tr>
+    <tr><td>引导安装车机端</td><td><code>PhoneInstallApkActivity</code> <code>PhoneCarLinkInstallActivity</code> <code>UsbCastTeachActivity</code> <code>PhoneDuoKaiTeachActivity</code></td></tr>
+    <tr><td>OCR 抢单引擎</td><td><code>PhoneRobotOrderHelper$startOcrThread</code> <code>DiDiOrderInfoBean</code> <code>AccessNodeOrderInfo</code></td></tr>
+    <tr><td>无障碍</td><td><code>MyCarControlService</code> + <code>ScreenCaptureAutoClickHelper</code> + <code>PhoneControlHelper</code></td></tr>
+  </tbody></table>
+  <h3><span class="tag c">仅车机端</span></h3>
+  <table><tbody>
+    <tr><td style="width:150px">解码渲染</td><td><code>car.cast.MyVideoDecoder</code> <code>CarVideoCastActivity</code> <code>CarScreenRecordActivity</code></td></tr>
+    <tr><td>窗口化交互</td><td><code>CarCastWindowTouchHelper</code>（含 <code>mScaleDetector</code>）<code>CarCastWindowInfo</code> <code>CarCastBottomFuncStyleActivity</code></td></tr>
+    <tr><td>抢单 UI</td><td><code>CarRobotOrderFloatManager</code>（<code>selectWindowTopTipStyle</code>）<code>CarConfirmFloatManager</code></td></tr>
+    <tr><td>多开选应用</td><td><code>CarDuoKaiFloatAppAdapter</code> <code>CarFloatFunctionAdapter</code> <code>CarMainFuncAdapter</code></td></tr>
+    <tr><td>语音</td><td><code>CarSpeechRecognizerActivity</code>（车机麦克风 ASR，singleTask + 透明常驻）</td></tr>
+    <tr><td>外设与文件</td><td><code>CarUsbDeviceManagerActivity</code> <code>CarUsbDeviceAdapter</code> <code>CarShareFileActivity</code> <code>CarInstallApkActivity</code></td></tr>
+    <tr><td>ADB 激活（4 入口）</td><td><code>CarActiveAdbActivity</code> <code>ByUsb</code> <code>ByNet</code> <code>PairQrcode</code></td></tr>
+    <tr><td>权限与常驻</td><td><code>CarPermissionRequestActivity</code> <code>CarService</code> <code>CarAudioParamActivity</code></td></tr>
+  </tbody></table>
+  <h3><span class="tag both">两端对称</span></h3>
+  <div>
+    <span class="pill">设置 <b>PhoneSettingActivity</b> / <b>CarSetting + CarBaseSetting + CarConnectSetting</b></span>
+    <span class="pill">教程 WebView <b>PhoneTeachForWebPage</b> / <b>CarWebViewActivity</b></span>
+    <span class="pill">语音识别 <b>MySpeechRecognizerActivity</b> / <b>CarSpeechRecognizerActivity</b></span>
+    <span class="pill">互推安装 <b>PhoneInstallApk</b> / <b>CarInstallApk</b></span>
+    <span class="pill">ADB 激活 <b>PhoneActiveAdb*</b> / <b>CarActiveAdb*</b>（互为对手方）</span>
+  </div>
+</section>
+
+<section id="s6">
+  <h2>06 · 传输层与编解码</h2>
+  <p class="lead">共享库承载传输，但编解码器分属两端包命名空间 —— 这是判定角色方向最可靠的证据。</p>
+  <table>
+    <thead><tr><th>层</th><th>实现</th><th>归属</th><th>证据</th></tr></thead>
+    <tbody>
+      <tr><td>编码</td><td>H.264 + AAC</td><td><span class="tag p">手机端</span></td><td><code>PhoneCastVideoCoder</code>、<code>createVideoFormat(mediaC, pushWidth, pushHeight)</code>、<code>VIDEO_WIDTH/HEIGHT</code></td></tr>
+      <tr><td>解码</td><td>MediaCodec 解码</td><td><span class="tag c">车机端</span></td><td><code>car.cast.MyVideoDecoder</code>、<code>audio.MyAudioDecoder</code>、<code>demuxer_stall_500_count</code></td></tr>
+      <tr><td>可靠通道</td><td>Netty</td><td>共享</td><td><code>lancomm.netty.MyMessageDecoder</code>、包内含 <code>io.netty.bootstrap.ServerBootstrap</code></td></tr>
+      <tr><td>视频通道</td><td>UDP + 自研流控</td><td>共享</td><td><code>RemoteUdpFlowHelper</code> <code>UdpSendCastInfo</code> <code>UdpResendItem</code> <code>BytePoolManagerForUdp/Video</code></td></tr>
+      <tr><td>设备发现</td><td>NSD/mDNS + 扫码</td><td>共享</td><td><code>base.nsd.NsdHelper</code>、手机 <code>CustomScannerActivity</code> ↔ 车机 <code>CheckPhoneScanConnHelper</code></td></tr>
+      <tr><td>加密</td><td>SPAKE2 + ECDH + AES/GCM + TLS</td><td>共享</td><td><code>libspake2.so</code>、字符串 <code>AES/GCM</code>、<code>conscrypt</code></td></tr>
+      <tr><td>协商字段</td><td>deviceType 枚举</td><td>显式协商</td><td><code>carWidth/carHeight/densityDpi/castType/configIndex/isLand/isSingleFull</code></td></tr>
+    </tbody>
+  </table>
+  <div class="risk low"><b>正面评价</b><span>局域网通道用了 SPAKE2（口令认证密钥交换）+ ECDH + AES/GCM，<b>不是明文裸传</b>，比多数同类投屏工具规范。</span></div>
+  <p class="note inf"><span class="tag inf">推断</span> 谁是 TCP 服务端：从 <code>PhoneConnectHelper.sendInitDataToCar</code> 命名倾向"手机主动推送初始化数据"，但 <code>ServerBootstrap</code> 在共享库里两端可用，故不作结论。</p>
+</section>
+
+<section id="s7">
+  <h2>07 · 提权链路（完整时序）</h2>
+  <p class="lead">所谓"ADB 激活"不是配置项，而是一条跨设备的权限移交链。</p>
+  <div class="card">
+    <table><tbody>
+      <tr><td style="width:34px"><b>1</b></td><td>电脑运行 <code>激活脚本Windows.bat</code>，实际只执行 <b><code>adb tcpip 5555</code></b>（脚本原文已核验，另含设备计数与提示）</td></tr>
+      <tr><td><b>2</b></td><td>手机 adbd 转为监听 TCP 5555，<b style="color:var(--err)">该模式无网络侧二次认证</b></td></tr>
+      <tr><td><b>3</b></td><td>车机端用内置 <code>adblib.AdbProtocol</code> + <code>AdbKeyPair</code>（RSA）连上手机 5555</td></tr>
+      <tr><td><b>4</b></td><td>推送服务负载到 <code>/data/local/tmp/my_car_server_*</code>（另有 <code>ls</code> / <code>rm</code> 清理逻辑）</td></tr>
+      <tr><td><b>5</b></td><td><code>app_process -Djava.class.path=… com.sven.adbserver.MyNewServer</code> 以 <b>shell uid</b> 常驻；停止靠 <code>ps -ef | grep … | xargs kill -9</code></td></tr>
+      <tr><td><b>6</b></td><td>主 App 通过 <code>IMyAdbService</code> / <code>IMyAppService</code> AIDL 调用该服务；<code>RemoteAdbLocalSocketHelper</code> 做本地 socket 桥接</td></tr>
+    </tbody></table>
+  </div>
+  <h3>提权进程实际拿到的系统能力</h3>
+  <p class="note">从 <code>res/hh.jar</code> 明文 smali 提取（该 jar 未加固，2430 类可反编译）：</p>
+  <div>
+    <span class="pill"><code>createVirtualDisplay</code> 创建虚拟屏</span>
+    <span class="pill"><code>createDisplay</code> / <code>destroyDisplay</code></span>
+    <span class="pill"><code>injectInputEvent</code> 注入任意触控按键</span>
+    <span class="pill"><code>startActivityAsUser</code> 把任意 App 拉到虚拟屏</span>
+    <span class="pill"><code>forceStopPackage</code> 强杀任意 App</span>
+    <span class="pill"><code>IActivityManager</code> · <code>IDisplayManager$Stub</code> · <code>IWindowManager$Stub</code> · <code>IPackageManager$Stub</code></span>
+  </div>
+  <div class="risk"><b>能力等价于整台手机的 adb</b>
+    <span>App 内对这一层的依赖被写得很直白：<code>窗口比例 / 手机息屏 / 接单助手 / 键盘输入 / 应用流转</code> 五项全部标注「功能需激活手机ADB服务才可使用」。</span></div>
+  <details><summary>被锁在提权后的功能清单（dex 原文）</summary><div class="body"><pre>窗口比例 功能需激活手机ADB服务才可使用
+手机息屏 功能需激活手机ADB服务才可使用
+接单助手 功能需激活手机ADB服务才可使用
+键盘输入 功能需激活手机ADB服务才可使用
+应用流转 功能需激活手机ADB服务才可使用
+主窗口不能设置窗口比例
+横屏下不能设置窗口比例
+只对多窗口投屏方式生效 投屏成功后手机自动息屏</pre></div></details>
+</section>
+
+<section id="s8">
+  <h2>08 · 抢单引擎的跨层分布</h2>
+  <p class="lead">数据结构的包归属，比任何宣传语都更能说明产品的真实定位。</p>
+  <table>
+    <thead><tr><th>层</th><th>关键类</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag p">手机端</span></td><td><code>DiDiOrderInfoBean</code> <code>OrderBean</code> <code>AccessNodeOrderInfo</code> <code>PhoneRobotOrderHelper$startOcrThread</code></td><td>平台订单数据结构 + OCR 线程在此启动</td></tr>
+      <tr><td><span class="tag" style="color:#ff8a65;border-color:rgba(255,138,101,.3);background:rgba(255,138,101,.08)">提权进程</span></td><td><code>adbserver.RobotOrderOcrBean</code></td><td><b>OCR 结果类放进 shell 权限进程</b>，让截屏与注入在同一进程内闭环，不受主进程冻结影响</td></tr>
+      <tr><td>共享层</td><td><code>MyRobotOrderBean</code> <code>MyRobotOrderRuleBean</code> <code>MyRobotPixRioHashBean</code> <code>RobotOCRSingleLine</code> <code>RobotOCRMergeLine</code> <code>NodeTextInfo</code> <code>MyAccessibilityNode</code></td><td>规则引擎 + 像素哈希去抖 + OCR 行合并 + 无障碍节点文本</td></tr>
+      <tr><td><span class="tag c">车机端</span></td><td><code>CarRobotOrderFloatManager</code> <code>CarConfirmFloatManager</code> <code>CarCastWindowTouchHelper.autoTouchForStartOrder</code></td><td>展示 + 车机侧自动点确认</td></tr>
+    </tbody>
+  </table>
+  <h3>识别策略是三管齐下</h3>
+  <div>
+    <span class="pill"><b>无障碍节点文本</b> NodeTextInfo / NodeTextLineInfo</span>
+    <span class="pill"><b>OCR 行合并</b> RobotOCRSingleLine → RobotOCRMergeLine</span>
+    <span class="pill"><b>像素哈希</b> MyRobotPixRioHashBean（判断画面是否变化 / 去抖）</span>
+  </div>
+  <div class="risk mid"><b>平台合规风险</b><span>自动抢单 + 多开在滴滴等平台服务协议下通常属违规外挂，存在账号封禁风险；<code>isRobotOrderOpen</code> 一旦被平台风控识别，后果由司机账号承担。</span></div>
+</section>
+
+<section id="s9">
+  <h2>09 · 架构事实：移植了 scrcpy</h2>
+  <p class="lead">多窗口投屏的坐标换算、多点触控与视频裁剪并非自研，而是 scrcpy（Apache 2.0）的 Java 侧移植。</p>
+  <div class="grid g2">
+    <div class="card"><b style="color:var(--g2)">com.sven.commoncast.scrcpy 包内容</b>
+      <div class="body" style="padding:6px 0 0"><pre>AffineMatrix   Orientation   Point   Pointer
+PointersState  Position      Size    TouchEventHelper
+VideoFilter    oldcontrol/OldPointer
+oldcontrol/OldPointersState</pre>
+      <div class="note">类名与 scrcpy 的 <code>device/</code> 与 <code>/input</code> 一一对应；<code>oldcontrol</code> 对应 scrcpy 旧版控制协议。</div>
+    </div>
+    <div class="card"><b style="color:var(--g2)">这解释了为什么必须提权</b>
+      <div class="body" style="padding:6px 0 0">
+        <p style="color:var(--dim);font-size:13.5px;margin:0 0 10px">scrcpy 的工作方式就是"PC 用 adb 在手机上以 shell 身份跑一个 server，由它创建虚拟屏、采集、编码，再回传"。本产品把"PC"换成了车机、把"回传 PC"换成了回传车机 —— 因此<b style="color:var(--ink)">它必须获得 shell 身份</b>，也就必须走 <code>app_process</code>。</p>
+        <p style="color:var(--dim);font-size:13.5px;margin:10px 0 0">副作用是好的：shell 进程采集<b style="color:var(--g2)">不需要 MediaProjection 授权框</b>（与 <code>screenrecord</code> 同理）。所以"画面小"和"授权框骚扰"是同一个开关解决的。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="s10">
+  <h2>10 · 安全面评估</h2>
+  <div class="risk"><b>高危 · 无认证 adbd 暴露在同网段</b>
+    <span><code>tcpip 5555</code> 后网络 adb 无二次认证，而 App 的连接指引正是「车机连接手机的 WiFi 热点」。等于主动开一个局域网，把 adb 暴露给一台装了不明 APK 的第三方车机及同热点下任何设备。缓解：优先走 <code>AdbWirelessHelper.startPair</code>（Android 11+ 无线调试配对，每次重连需确认）；用完 <code>adb usb</code> 收回；不要把该热点共享给其他设备。</span></div>
+  <div class="risk mid"><b>中危 · 权限组合的能力上限</b>
+    <span>无障碍（读全屏 + 点击）+ ADB 提权（造屏 / 注入 / 启停 App）+ OCR + 高德定位 + 全量设备标识 + 字节系广告 SDK + 自更新（<code>REQUEST_INSTALL_PACKAGES</code>）。同时包内存在 11MB 的 <code>libmlkit_google_ocr_pipeline.so</code>。请把它当成"给了第三方 App 整台手机的 shell"来决策。</span></div>
+  <div class="risk mid"><b>中危 · 一次"拒绝"即静默失效</b>
+    <span>实测确认：在投屏授权框点「拒绝」会把 <code>PROJECT_MEDIA</code> 打回 <code>ignore</code>，之后所有投屏被静默掐断 —— App 不报错，只是连不上。这是本次排查的根因。</span></div>
+  <div class="risk low"><b>可收紧 · 无权限保护的导出组件</b>
+    <span><code>ChangeOrientationService</code> 与 <code>PhoneService</code> 均 <code>exported=true</code> 且未见自定义权限保护，同机任意 App 可尝试调用。车机端导出面反而小（仅 2 个）。</span></div>
+  <div class="risk low"><b>正面 · 通道加密规范</b>
+    <span>SPAKE2 + ECDH + AES/GCM + TLS，局域网传输非明文。</span></div>
+</section>
+
+<section id="s11">
+  <h2>11 · 证据可信度</h2>
+  <p class="lead">SecShell 剥掉了 class_defs，因此本报告严格区分"看到的东西"和"据此的推断"。</p>
+  <div class="grid g2">
+    <div class="card"><b style="color:#a5d6a7">已证实</b>
+      <div class="body" style="padding:6px 0 0;font-size:13px;color:var(--dim)">
+        编解码器包归属 · 178 组件全部属性统计 · scrcpy 移植类存在 · <code>adblib</code> 完整 ADB 客户端与 <code>AdbKeyPair</code> · 车机端 4 个激活入口 · 触控反向与车机本地缩放 · 应用列表同步类 · 抢单引擎跨层分布 · 提权进程 6 个隐藏 API 与 4 个 binder · 激活脚本原文仅 <code>adb tcpip 5555</code> · <code>my_car_server_*</code> 推送与清理 · SPAKE2/AES-GCM · 设备侧全部权限与 appops 实测态 · SecShell 剥离 class_defs（640 类）
+      </div></div>
+    <div class="card inf"><b style="color:#ce93d8">推断（未拿到分支代码）</b>
+      <div class="body" style="padding:6px 0 0;font-size:13px;color:var(--dim)">
+        TCP 服务端归属 · <code>PhoneWholeCastActivity</code> 采用 <code>singleInstancePerTask</code> 的确切动机 · <code>CarScreenRecordActivity</code> 用途（录屏 or 二次采集）· <code>yunphonecontroller</code> 云手机与两端关系 · <code>liblight.so</code> 是否为壳的 dex 载体 · 自动接单的触发条件与点击时序
+      </div></div>
+  </div>
+</section>
+
+<section id="s12">
+  <h2>12 · 落点与建议</h2>
+  <div class="grid g2">
+    <div class="card"><b style="color:var(--g2)">画面小到离谱</b>
+      <div class="body" style="padding:6px 0 0;font-size:13.5px;color:var(--dim)">
+        根因是走了手机端 <code>PhoneWholeCastHelper</code> 整屏镜像：1440×3168 / 640dpi 被等比压进车机屏，缩放比约 <b style="color:var(--ink)">0.227</b>。
+        能调的「窗口比例」被写死在 ADB 激活之后。正解：激活 ADB → 切 <code>MultiViewActivity</code> 多窗口 → 按 <code>carWidth/carHeight/densityDpi</code> 建虚拟屏。
+      </div></div>
+    <div class="card"><b style="color:var(--g2)">投屏授权框</b>
+      <div class="body" style="padding:6px 0 0;font-size:13.5px;color:var(--dim)">
+        只在手机端、只在<b style="color:var(--ink)">单窗口</b>路径上存在（MediaProjection 是 App 级授权）。多窗口路径采集发生在 shell 进程内，<b style="color:var(--ink)">该框不存在</b>。
+        当前三层保障：<code>PROJECT_MEDIA=allow</code>（实测跨重启保住）→ 无障碍 <code>ScreenCaptureAutoClickHelper</code> 自动点 → 自建守护 App 开机自愈。唯一破坏动作是点「拒绝」。
+      </div></div>
+  </div>
+  <h3>建议顺序</h3>
+  <table><tbody>
+    <tr><td style="width:40px"><b>1</b></td><td>若接受提权：走 <b>无线调试配对</b>（<code>startPair</code>）而非 <code>tcpip 5555</code> 激活 ADB，切多窗口模式 —— 一次解决画面与授权两件事</td></tr>
+    <tr><td><b>2</b></td><td>若不接受提权：保持单窗口，依赖 <code>PROJECT_MEDIA=allow</code> + 无障碍自动点 + 自建守护 App 自愈；避免点「拒绝」</td></tr>
+    <tr><td><b>3</b></td><td>无论哪条：车机侧缩放模式设为"填充/拉伸"，投屏分辨率对齐车机屏原生分辨率</td></tr>
+    <tr><td><b>4</b></td><td>把 <code>adb tcpip 5555</code> 视为临时状态，用完即收回</td></tr>
+  </tbody></table>
+</section>
+
+<footer>
+  分析对象 <code>com.sven.mycar</code> v23.9.70 · 样本机 OnePlus 12 / ColorOS 16 · 生成于 2026-10-09<br>
+  配套产物：<code>车机投屏宝-逆向剖析报告.md</code> · <code>手机端与车机端实现差异报告.md</code> · <code>守护部署与自愈说明.md</code> · <code>guardapp/</code>（自建守护源码与 APK）<br>
+  本报告仅用于分析用户自有设备上已安装应用的行为与安全风险。
+</footer>
+
+</main>
+</div>
+<script>
+const links=[...document.querySelectorAll('nav a')];
+const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+const io=new IntersectionObserver(es=>{
+  es.forEach(e=>{if(e.isIntersecting){
+    const i=secs.indexOf(e.target);
+    links.forEach(l=>l.classList.remove('on'));
+    if(i>=0)links[i].classList.add('on');
+  }});
+},{rootMargin:'-15% 0px -75% 0px'});
+secs.forEach(s=>s&&io.observe(s));
+const tg=document.getElementById('tg');
+tg.onclick=()=>{document.body.classList.toggle('hide-inf');
+  tg.classList.toggle('on');
+  tg.textContent=document.body.classList.contains('hide-inf')?'◑ 显示全部（含推断）':'◐ 只看已证实（隐藏推断）';};
+</script>
+</body>
+</html>

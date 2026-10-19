@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">投屏授权守护</string>
+    <string name="guard_desc">检测到系统的投屏/录屏授权对话框时，自动点击允许，避免手机卡在授权环节。</string>
+</resources>

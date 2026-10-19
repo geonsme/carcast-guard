@@ -1,0 +1,27 @@
+# ===== 第三方商业应用及其衍生物（版权原因，不入库）=====
+# 车机投屏宝原始 APK、解包出的 dex / 资源 / 图标 / 官方激活工具
+# 注意：一律用根路径锚定，避免误伤 guardapp/res/ 等项目自身资源
+/车机投屏宝.apk
+/classes.dex
+/hh/
+/res/
+/icon_src/
+/tool/
+/adb_active_tool.zip
+/carcast_icon.png
+/palette.raw
+
+# ===== 构建产物与签名材料 =====
+guardapp/build/
+guardapp/*.idsig
+*.idsig
+*.ks
+*.keystore
+*.jks
+
+# ===== 系统与编辑器 =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml

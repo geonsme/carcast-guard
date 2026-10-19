@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 取自车机投屏宝图标的实测色值 -->
+    <color name="ic_launcher_background">#1E2022</color>
+    <color name="guard_green_start">#84D87B</color>
+    <color name="guard_green_mid">#BAF974</color>
+    <color name="guard_green_end">#5B8557</color>
+</resources>
