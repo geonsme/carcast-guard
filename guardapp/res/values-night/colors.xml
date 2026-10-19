@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 夜间模式（默认） -->
+    <color name="bg">#080A0A</color>
+    <color name="surface">#111514</color>
+    <color name="surface_2">#161C19</color>
+    <color name="stroke">#242C28</color>
+    <color name="stroke_soft">#1A211E</color>
+
+    <color name="text_primary">#F2F6F0</color>
+    <color name="text_secondary">#99A49E</color>
+    <color name="text_muted">#5F6A64</color>
+
+    <color name="accent">#C7F86F</color>
+    <color name="accent_soft">#9BD94E</color>
+    <color name="accent_deep">#5E8B2F</color>
+    <color name="ink">#0A0F06</color>
+    <color name="warn">#FFC46B</color>
+    <color name="err">#FF7A6B</color>
+
+    <color name="ok_tint">#1FC7F86F</color>
+    <color name="warn_tint">#1FFFC46B</color>
+    <color name="err_tint">#1FFF7A6B</color>
+    <color name="neutral_tint">#12FFFFFF</color>
+
+    <color name="bottom_bar_start">#00080A0A</color>
+    <color name="bottom_bar_center">#E6080A0A</color>
+    <color name="bottom_bar_end">#FF080A0A</color>
+    <color name="hero_start">#1A241D</color>
+    <color name="hero_center">#131917</color>
+    <color name="hero_end">#0D1110</color>
+    <color name="hero_stroke">#2C3A31</color>
+    <color name="ghost_ripple">#1AFFFFFF</color>
+    <color name="ghost_solid">#121715</color>
+    <color name="ghost_stroke">#2A332E</color>
+    <color name="primary_ripple">#330A0F06</color>
+    <color name="dialog_solid">#151B18</color>
+    <color name="dialog_stroke">#2C3731</color>
+    <color name="icon_soft_solid">#171D1A</color>
+    <color name="icon_soft_stroke">#232C27</color>
+    <color name="icon_tile_start">#1F2B22</color>
+    <color name="icon_tile_end">#121713</color>
+    <color name="icon_tile_stroke">#334332</color>
+    <color name="log_solid">#0D1110</color>
+    <color name="log_stroke">#1C2420</color>
+
+    <color name="pill_neutral_stroke">#1AFFFFFF</color>
+    <color name="ok_stroke">#2EC7F86F</color>
+    <color name="warn_stroke">#2EFFC46B</color>
+    <color name="err_stroke">#2EFF7A6B</color>
+    <color name="danger_ripple">#33FF7A6B</color>
+    <color name="danger_solid">#26FF7A6B</color>
+    <color name="danger_stroke">#4DFF7A6B</color>
+
+    <color name="gauge_track">#1C2521</color>
+    <color name="gauge_tick">#2C3631</color>
+    <color name="backdrop_grid">#0BFFFFFF</color>
+    <color name="backdrop_lime_inner">#2E3E5C2F</color>
+    <color name="backdrop_lime_outer">#001B2A1C</color>
+    <color name="backdrop_warm_inner">#10FFC46B</color>
+    <color name="backdrop_warm_outer">#00FFC46B</color>
+</resources>

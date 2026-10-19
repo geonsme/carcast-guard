@@ -17,7 +17,7 @@
         android:layout_height="22dp"
         android:contentDescription="@null"
         android:src="@drawable/ic_shield"
-        android:tint="@color/accent" />
+        android:tint="@color/widget_accent" />
 
     <TextView
         android:id="@+id/widgetStatus"
@@ -30,6 +30,6 @@
         android:includeFontPadding="false"
         android:maxLines="1"
         android:text="守护中"
-        android:textColor="@color/accent"
+        android:textColor="@color/widget_accent"
         android:textSize="12sp" />
 </LinearLayout>

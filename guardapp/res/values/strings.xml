@@ -2,6 +2,10 @@
 <resources>
     <string name="app_name">车控守护</string>
     <string name="brand_sub">CARCAST · KEY GUARD</string>
+    <string name="theme_to_light">切换到白天模式</string>
+    <string name="theme_to_dark">切换到夜间模式</string>
+    <string name="theme_light_on">已切换到白天模式</string>
+    <string name="theme_night_on">已切换到夜间模式</string>
     <string name="guard_desc">自动放行投屏/录屏授权，并守护车机投屏宝与哪吒汽车的后台通道。哪吒通道通过系统级服务绑定与心跳广播保活，不采集、不上传任何数据。</string>
 
     <string name="header_status">守护中</string>

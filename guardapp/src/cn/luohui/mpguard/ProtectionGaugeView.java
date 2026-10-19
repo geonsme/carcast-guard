@@ -39,7 +39,8 @@ public class ProtectionGaugeView extends View {
     private float radius;
     private float shown;
     private int target;
-    private int accent = 0xFFC7F86F;
+    private int accent;
+    private final int tickDim;
     private Shader arcShader;
     private Shader coreGlow;
     private ValueAnimator animator;
@@ -51,13 +52,15 @@ public class ProtectionGaugeView extends View {
     public ProtectionGaugeView(Context context, AttributeSet attrs) {
         super(context, attrs);
         density = getResources().getDisplayMetrics().density;
+        accent = context.getColor(R.color.accent);
+        tickDim = context.getColor(R.color.gauge_tick);
         scoreType = loadFont(R.font.rajdhani_semibold, Typeface.create("sans-serif", Typeface.NORMAL));
         labelType = loadFont(R.font.rajdhani_medium, Typeface.create("sans-serif", Typeface.NORMAL));
 
         trackPaint.setStyle(Paint.Style.STROKE);
         trackPaint.setStrokeWidth(dp(8.5f));
         trackPaint.setStrokeCap(Paint.Cap.ROUND);
-        trackPaint.setColor(0xFF1C2521);
+        trackPaint.setColor(context.getColor(R.color.gauge_track));
 
         arcPaint.setStyle(Paint.Style.STROKE);
         arcPaint.setStrokeWidth(dp(8.5f));
@@ -75,7 +78,7 @@ public class ProtectionGaugeView extends View {
 
         scorePaint.setTextAlign(Paint.Align.CENTER);
         scorePaint.setTypeface(scoreType);
-        scorePaint.setColor(0xFFF2F6F0);
+        scorePaint.setColor(context.getColor(R.color.text_primary));
 
         labelPaint.setTextAlign(Paint.Align.CENTER);
         labelPaint.setTypeface(labelType);
@@ -184,7 +187,7 @@ public class ProtectionGaugeView extends View {
             float inner = radius + dp(12f);
             float outer = radius + dp(17f);
             boolean lit = (i * 100f / TICKS) <= shown;
-            tickPaint.setColor(lit ? withAlpha(accent, 155) : 0xFF2C3631);
+            tickPaint.setColor(lit ? withAlpha(accent, 155) : tickDim);
             canvas.drawLine(cx + cos * inner, cy + sin * inner,
                     cx + cos * outer, cy + sin * outer, tickPaint);
         }

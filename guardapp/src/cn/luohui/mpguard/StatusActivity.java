@@ -7,6 +7,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
@@ -64,10 +65,12 @@ public class StatusActivity extends Activity implements View.OnClickListener {
     private LinearLayout conditionsContainer;
     private TextView lastAction;
     private TextView lastActionTime;
-    private TextView btnRearm;
+    private LinearLayout btnRearm;
+    private TextView btnRearmLabel;
     private TextView btnCheck;
     private TextView btnToggle;
     private ImageButton btnJump;
+    private ImageButton btnTheme;
     private TextView updateVersion;
     private TextView updateHint;
     private TextView btnUpdate;
@@ -88,8 +91,14 @@ public class StatusActivity extends Activity implements View.OnClickListener {
     private Refresher refresher;
 
     @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(ThemePrefs.wrap(newBase));
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        applyWindowChrome();
         setContentView(R.layout.activity_status);
 
         C_OK = getColor(R.color.accent);
@@ -100,6 +109,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         C_TEXT2 = getColor(R.color.text_secondary);
 
         bindViews();
+        applyThemeIcon();
         setupTargets();
         setupConditions();
         setupClicks();
@@ -135,10 +145,12 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         conditionsContainer = (LinearLayout) findViewById(R.id.conditionsCard);
         lastAction = (TextView) findViewById(R.id.lastAction);
         lastActionTime = (TextView) findViewById(R.id.lastActionTime);
-        btnRearm = (TextView) findViewById(R.id.btnRearm);
+        btnRearm = (LinearLayout) findViewById(R.id.btnRearm);
+        btnRearmLabel = (TextView) findViewById(R.id.btnRearmLabel);
         btnCheck = (TextView) findViewById(R.id.btnCheck);
         btnToggle = (TextView) findViewById(R.id.btnToggle);
         btnJump = (ImageButton) findViewById(R.id.btnJump);
+        btnTheme = (ImageButton) findViewById(R.id.btnTheme);
         updateVersion = (TextView) findViewById(R.id.updateVersion);
         updateHint = (TextView) findViewById(R.id.updateHint);
         btnUpdate = (TextView) findViewById(R.id.btnUpdate);
@@ -219,6 +231,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         btnCheck.setOnClickListener(this);
         btnJump.setOnClickListener(this);
         btnToggle.setOnClickListener(this);
+        btnTheme.setOnClickListener(this);
         btnUpdate.setOnClickListener(this);
     }
 
@@ -246,9 +259,42 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         } else if (v == btnToggle) {
             if (Rearm.userDisabled(this)) enableGuard();
             else showStopDialog();
+        } else if (v == btnTheme) {
+            toggleTheme();
         } else if (v == btnUpdate) {
             onUpdateClicked();
         }
+    }
+
+    private void applyWindowChrome() {
+        Window w = getWindow();
+        w.setBackgroundDrawable(new ColorDrawable(getColor(R.color.bg)));
+        w.setStatusBarColor(getColor(R.color.bg));
+        w.setNavigationBarColor(getColor(R.color.bg));
+        int flags = View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        if (!ThemePrefs.isNight(this)) {
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        }
+        w.getDecorView().setSystemUiVisibility(flags);
+    }
+
+    private void applyThemeIcon() {
+        boolean night = ThemePrefs.isNight(this);
+        btnTheme.setImageResource(night ? R.drawable.ic_sun : R.drawable.ic_moon);
+        btnTheme.setContentDescription(
+                getString(night ? R.string.theme_to_light : R.string.theme_to_dark));
+    }
+
+    private void toggleTheme() {
+        if (updateBusy) {
+            toast("更新进行中，完成后可切换主题");
+            return;
+        }
+        boolean night = !ThemePrefs.isNight(this);
+        ThemePrefs.setNight(this, night);
+        toast(getString(night ? R.string.theme_night_on : R.string.theme_light_on));
+        recreate();
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
     private void healGuard() {
@@ -805,7 +851,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         else { dozeValue = "部分豁免"; dozeState = 1; }
         setCond(3, dozeValue, dozeState);
 
-        btnRearm.setText(off ? R.string.btn_restore : R.string.btn_heal);
+        btnRearmLabel.setText(off ? R.string.btn_restore : R.string.btn_heal);
         btnToggle.setText(off ? R.string.btn_enable : R.string.btn_disable);
         btnToggle.setTextColor(off ? C_OK : C_TEXT2);
     }

@@ -38,12 +38,12 @@ public class GuardWidgetProvider extends AppWidgetProvider {
 
         String text;
         int color;
-        if (off) { text = "已停用"; color = ctx.getColor(R.color.text_muted); }
-        else if (!perm) { text = "待授权"; color = ctx.getColor(R.color.err); }
-        else if (!master || !selfIn || !selfLoaded) { text = "待激活"; color = ctx.getColor(R.color.err); }
-        else if (!netaInstalled) { text = "仅投屏"; color = ctx.getColor(R.color.warn); }
-        else if (!netaBound) { text = "重连中"; color = ctx.getColor(R.color.warn); }
-        else { text = "守护中"; color = ctx.getColor(R.color.accent); }
+        if (off) { text = "已停用"; color = ctx.getColor(R.color.widget_muted); }
+        else if (!perm) { text = "待授权"; color = ctx.getColor(R.color.widget_err); }
+        else if (!master || !selfIn || !selfLoaded) { text = "待激活"; color = ctx.getColor(R.color.widget_err); }
+        else if (!netaInstalled) { text = "仅投屏"; color = ctx.getColor(R.color.widget_warn); }
+        else if (!netaBound) { text = "重连中"; color = ctx.getColor(R.color.widget_warn); }
+        else { text = "守护中"; color = ctx.getColor(R.color.widget_accent); }
 
         RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_guard);
         rv.setTextViewText(R.id.widgetStatus, text);

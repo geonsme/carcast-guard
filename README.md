@@ -50,6 +50,7 @@
 │   │   ├── font/rajdhani_*.ttf    # Rajdhani 数字与拉丁小标（OFL）
 │   │   ├── mipmap-anydpi-v26/     # 自适应图标
 │   │   ├── values/{colors,strings,styles}.xml
+│   │   ├── values-night/colors.xml # 夜间调色板
 │   │   └── xml/guard_config.xml   # 无障碍服务配置
 │   ├── src/cn/luohui/mpguard/
 │   │   ├── GuardService.java      # 无障碍服务：识别并关闭投屏授权框
@@ -60,15 +61,16 @@
 │   │   ├── BootReceiver.java      # BOOT_COMPLETED 兜底
 │   │   ├── NetaKeeper.java        # 哪吒 MQTT 绑定/心跳/掉线重绑
 │   │   ├── GuardWidgetProvider.java # 2×1 桌面状态磁贴
+│   │   ├── ThemePrefs.java        # 明暗主题偏好与 uiMode 覆盖
 │   │   ├── UpdateChecker.java     # Release 检查/下载/签名校验/安装
 │   │   ├── VersionUtil.java       # 语义版本归一化与比较
 │   │   ├── InstallResultReceiver.java # PackageInstaller 结果回执
 │   │   ├── ProtectionGaugeView.java # 270° 自定义守护指数仪表
-│   │   ├── BackdropView.java      # 深炭黑底 + 光晕 + 网格背景
+│   │   ├── BackdropView.java      # 主题化底色 + 光晕 + 网格背景
 │   │   └── StatusActivity.java    # 状态页：守护指数/目标卡/系统条件/动作
 │   ├── build.sh                   # 跨平台构建：本地 Windows / Actions Linux
 │   ├── render_preview.js          # 图标矢量栅格化预览
-│   └── mp-guard.apk               # 已签名成品（v1.15，约 0.52 MB，含字体）
+│   └── mp-guard.apk               # 已签名成品（v1.16，约 0.52 MB，含字体）
 ├── mp_guard.sh                    # shell 级兜底守护（设备端，需 adb）
 ├── rearm.sh                       # 电脑端一条命令恢复（含哪吒钉权）
 ├── verify_after_reboot.sh         # 重启后逐项核对（双通道 38 项）
@@ -81,7 +83,8 @@
 
 ## 3. 车控守护 App
 
-包名 `cn.luohui.mpguard`，自签，约 0.52 MB。v1.15 新增应用内更新与 ColorOS 2×1 标准磁贴；
+包名 `cn.luohui.mpguard`，自签，约 0.52 MB。v1.16 加入应用内明暗主题切换，并修正底部动作按钮的图标与文字间距；
+v1.15 新增应用内更新与 ColorOS 2×1 标准磁贴；
 网络权限只用于访问 GitHub Release 检查/下载更新，不上传任何本地数据。
 v1.12 起同时承担两条链路：投屏宝无障碍自愈 + 哪吒汽车后台保活；v1.13 加入 Doze 兜底；
 v1.14 把兜底拆成“守护自愈”与“直连哪吒”两路，并实测排除了 `BIND_ABOVE_CLIENT` 方案。
@@ -149,7 +152,7 @@ GuardService（系统绑定，常驻）
 
 ### 3.4 状态页（v1.12）
 
-一屏式汽车仪表盘：270° 守护指数、双目标卡、系统条件、最近动作，底部常驻三个动作。
+一屏式汽车仪表盘：270° 守护指数、双目标卡、系统条件、最近动作，底部常驻四个动作（立即自愈、检测、重绑哪吒、停用/启用守护），右上角为明暗主题切换。
 
 - **守护指数**：无障碍总开关、自愈权限、定时任务、投屏宝已加载、哪吒已绑定等 7 项加权，0–100 动态动画
 - **目标卡**：投屏宝（无障碍通道 / 投屏弹窗策略 / 本次放行次数）与哪吒汽车（MQTT 绑定 / 心跳唤醒 / 双路闹钟）
@@ -179,12 +182,28 @@ GuardService（系统绑定，常驻）
 - 检查/下载都在后台线程，失败只更新卡片提示或 Toast，不影响守护主链路；更新源要求仓库与 Release 公开。
 - 覆盖安装后 `MY_PACKAGE_REPLACED` 会触发自愈，原有双通道会重新登记。
 
-### 3.7 图标与视觉
+### 3.7 明暗主题（v1.16）
 
-深炭黑 `#080A0A` + 柠檬绿 `#C7F86F` 主色，琥珀 `#FFC46B` 与珊瑚 `#FF7A6B` 分级告警；
+状态页右上角新增 36dp 的主题按钮，在白天/夜间模式之间切换，默认夜间，不占用版面。
+
+- 偏好保存在 `guard_ui` SharedPreferences（键 `night_mode`，默认 `true`），与系统主题相互独立：
+  系统白天时 App 仍默认暗色，系统夜间时也可强制切到亮色。
+- 不使用 AppCompat：`StatusActivity.attachBaseContext` 通过 `ThemePrefs.wrap()` 用
+  `createConfigurationContext` 覆盖 `Configuration.uiMode` 的 `NIGHT_*` 位，再配合 `values-night/colors.xml`
+  让全部颜色资源按主题解析；切换后 `recreate()` 并淡入淡出。
+- 状态栏/导航栏颜色与图标明暗随主题同步；`BackdropView`、`ProtectionGaugeView` 改为从颜色资源取色。
+- 桌面 2×1 磁贴固定使用 `widget_*` 常量色，保持暗色外观，不随主题变化。
+- 更新下载/安装进行中禁止切换主题，避免重建 Activity 丢失安装回执。
+- 底部「立即自愈」按钮由 `TextView` 复合 drawable 改为 `LinearLayout` 包 `ImageView + TextView`，
+  图标与文字间距 5dp 并整体居中；此前 `drawableStart` 会把图标钉在按钮左缘、文字单独居中。
+
+### 3.8 图标与视觉
+
+夜间为深炭黑 `#080A0A` + 柠檬绿 `#C7F86F` 主色，琥珀 `#FFC46B` 与珊瑚 `#FF7A6B` 分级告警；
+白天换为暖白底 `#F3F5EF`、白卡片与深绿 `#4F7A1F` 主色，同一套语义色位；
 数字与拉丁小标使用 Rajdhani（OFL），背景为网格 + 双光晕，母题为盾牌 + 对勾。
 
-### 3.8 REA 对哪吒 APK 的静态核对
+### 3.9 REA 对哪吒 APK 的静态核对
 
 用 REA 6.7.0（JADX headless 0.7.1 解码 Manifest）对本地包体 `com.hezhong.nezha.apk`
 （6.4.3 / versionCode 163，targetSdk 32，SHA-256 `80eed409…f6d79f`）做了核对。
@@ -313,8 +332,8 @@ adb shell am set-standby-bucket com.hezhong.nezha 5
 （`platforms;android-33` + `build-tools;33.0.1`），直接调用同一个 `guardapp/build.sh`。
 
 - **每次 push**（任意分支）：构建 APK，上传为 Actions artifact，命名 `mp-guard-<短 SHA>.apk`。
-- **打 tag**（`v1.15`、`v1.15.1`）：额外创建 GitHub Release，附件为 `mp-guard-<tag>.apk`，
-  并用 tag 自动改写 `versionName` 与 `versionCode`（`1.15` → `11500`），无需手工改 Manifest。
+- **打 tag**（`v1.16`、`v1.16.1`）：额外创建 GitHub Release，附件为 `mp-guard-<tag>.apk`，
+  并用 tag 自动改写 `versionName` 与 `versionCode`（`1.16` → `11600`），无需手工改 Manifest。
 - 仓库必须为 **public**：App 内更新以匿名身份读取 `releases/latest` 和下载附件；私有仓库会 404。
   Release 不能是 draft / prerelease，否则不会被 `latest` 返回。
 - 更新包由 App 校验签名；CI 必须继续使用同一把 keystore，否则会被拒绝安装。
@@ -322,7 +341,7 @@ adb shell am set-standby-bucket com.hezhong.nezha 5
   - `MPGUARD_KS_BASE64`：`guardapp/mpguard.ks` 的 Base64
   - `MPGUARD_KS_PASS` / `MPGUARD_KEY_PASS`：keystore 与 key 密码
   - `MPGUARD_KEY_ALIAS` 可选，默认 `mpguard`
-- 触发发布：`git tag v1.15 && git push origin v1.15`。
+- 触发发布：`git tag v1.16 && git push origin v1.16`。
 
 ## 7. 已知限制
 

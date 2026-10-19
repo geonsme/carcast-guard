@@ -1,29 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#080A0A</color>
-    <color name="surface">#111514</color>
-    <color name="surface_2">#161C19</color>
-    <color name="stroke">#242C28</color>
-    <color name="stroke_soft">#1A211E</color>
+    <!-- 白天模式（默认夜间见 values-night/colors.xml） -->
+    <color name="bg">#F3F5EF</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_2">#E9EEE4</color>
+    <color name="stroke">#D6DED1</color>
+    <color name="stroke_soft">#E3E9DE</color>
 
-    <color name="text_primary">#F2F6F0</color>
-    <color name="text_secondary">#99A49E</color>
-    <color name="text_muted">#5F6A64</color>
+    <color name="text_primary">#17211B</color>
+    <color name="text_secondary">#4B5B51</color>
+    <color name="text_muted">#77857C</color>
 
-    <color name="accent">#C7F86F</color>
-    <color name="accent_soft">#9BD94E</color>
-    <color name="accent_deep">#5E8B2F</color>
-    <color name="ink">#0A0F06</color>
-    <color name="warn">#FFC46B</color>
-    <color name="err">#FF7A6B</color>
+    <color name="accent">#4F7A1F</color>
+    <color name="accent_soft">#6E9C34</color>
+    <color name="accent_deep">#355613</color>
+    <color name="ink">#FFFFFF</color>
+    <color name="warn">#9A6200</color>
+    <color name="err">#B8453A</color>
 
-    <color name="ok_tint">#1FC7F86F</color>
-    <color name="warn_tint">#1FFFC46B</color>
-    <color name="err_tint">#1FFF7A6B</color>
-    <color name="neutral_tint">#12FFFFFF</color>
+    <color name="ok_tint">#1A4F7A1F</color>
+    <color name="warn_tint">#1A9A6200</color>
+    <color name="err_tint">#1AB8453A</color>
+    <color name="neutral_tint">#0D000000</color>
 
+    <!-- 卡片、按钮与对话框 -->
+    <color name="bottom_bar_start">#00F3F5EF</color>
+    <color name="bottom_bar_center">#E6F3F5EF</color>
+    <color name="bottom_bar_end">#FFF3F5EF</color>
+    <color name="hero_start">#FFFFFF</color>
+    <color name="hero_center">#FAFCF7</color>
+    <color name="hero_end">#F2F6EC</color>
+    <color name="hero_stroke">#DCE5D7</color>
+    <color name="ghost_ripple">#14000000</color>
+    <color name="ghost_solid">#FFFFFF</color>
+    <color name="ghost_stroke">#D8E0D4</color>
+    <color name="primary_ripple">#33FFFFFF</color>
+    <color name="dialog_solid">#FFFFFF</color>
+    <color name="dialog_stroke">#DCE5D7</color>
+    <color name="icon_soft_solid">#EFF3EB</color>
+    <color name="icon_soft_stroke">#DDE6D7</color>
+    <color name="icon_tile_start">#F2F7EC</color>
+    <color name="icon_tile_end">#E6EEE0</color>
+    <color name="icon_tile_stroke">#D2DDCB</color>
+    <color name="log_solid">#F8FAF4</color>
+    <color name="log_stroke">#E2E9DD</color>
+
+    <!-- 胶囊与危险按钮 -->
+    <color name="pill_neutral_stroke">#1F000000</color>
+    <color name="ok_stroke">#334F7A1F</color>
+    <color name="warn_stroke">#339A6200</color>
+    <color name="err_stroke">#33B8453A</color>
+    <color name="danger_ripple">#26B8453A</color>
+    <color name="danger_solid">#14B8453A</color>
+    <color name="danger_stroke">#40B8453A</color>
+
+    <!-- 仪表与背景 -->
+    <color name="gauge_track">#DFE7DA</color>
+    <color name="gauge_tick">#D2DCCD</color>
+    <color name="backdrop_grid">#0F1B2A1C</color>
+    <color name="backdrop_lime_inner">#2478B34A</color>
+    <color name="backdrop_lime_outer">#0078B34A</color>
+    <color name="backdrop_warm_inner">#12FFB74D</color>
+    <color name="backdrop_warm_outer">#00FFB74D</color>
+
+    <!-- 固定配色：桌面磁贴与图标不随应用主题变化 -->
     <color name="ic_launcher_background">#1E2022</color>
     <color name="guard_green_start">#84D87B</color>
     <color name="guard_green_mid">#BAF974</color>
     <color name="guard_green_end">#5B8557</color>
+    <color name="widget_accent">#C7F86F</color>
+    <color name="widget_warn">#FFC46B</color>
+    <color name="widget_err">#FF7A6B</color>
+    <color name="widget_muted">#99A49E</color>
 </resources>

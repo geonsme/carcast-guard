@@ -13,6 +13,10 @@ public class BackdropView extends View {
 
     private final Paint glow = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint grid = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final int limeInner;
+    private final int limeOuter;
+    private final int warmInner;
+    private final int warmOuter;
     private float density;
     private Shader limeGlow;
     private Shader warmGlow;
@@ -24,8 +28,12 @@ public class BackdropView extends View {
     public BackdropView(Context context, AttributeSet attrs) {
         super(context, attrs);
         density = getResources().getDisplayMetrics().density;
-        grid.setColor(0x0BFFFFFF);
+        grid.setColor(context.getColor(R.color.backdrop_grid));
         grid.setStrokeWidth(density * 0.7f);
+        limeInner = context.getColor(R.color.backdrop_lime_inner);
+        limeOuter = context.getColor(R.color.backdrop_lime_outer);
+        warmInner = context.getColor(R.color.backdrop_warm_inner);
+        warmOuter = context.getColor(R.color.backdrop_warm_outer);
     }
 
     @Override
@@ -33,11 +41,11 @@ public class BackdropView extends View {
         super.onSizeChanged(w, h, oldw, oldh);
         limeGlow = new RadialGradient(
                 w * 0.88f, -h * 0.02f, w * 0.95f,
-                new int[]{0x2E3E5C2F, 0x001B2A1C},
+                new int[]{limeInner, limeOuter},
                 new float[]{0f, 1f}, Shader.TileMode.CLAMP);
         warmGlow = new RadialGradient(
                 w * 0.02f, h * 0.62f, w * 0.7f,
-                new int[]{0x10FFC46B, 0x00FFC46B},
+                new int[]{warmInner, warmOuter},
                 new float[]{0f, 1f}, Shader.TileMode.CLAMP);
     }
 
