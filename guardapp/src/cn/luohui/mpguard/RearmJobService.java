@@ -21,12 +21,14 @@ public class RearmJobService extends JobService {
         Log.i(TAG, "定时任务触发，执行自愈");
         if (Rearm.userDisabled(this)) {
             Log.i(TAG, "用户已停用，跳过自愈");
-            schedule(this);
             return false;
         }
         int n = Rearm.rearm(this);
         Log.i(TAG, "自愈结果: " + n);
-        schedule(this);
+        try { RearmAlarm.schedule(this); } catch (Exception e) { Log.w(TAG, "排定兜底闹钟失败: " + e); }
+        try { NetaKeeper.start(this); } catch (Exception e) { Log.w(TAG, "哪吒通道启动失败: " + e); }
+        GuardWidgetProvider.refresh(this);
+        // 周期任务由框架自动续期，重排会立刻再触发一次，形成死循环
         return false;
     }
 

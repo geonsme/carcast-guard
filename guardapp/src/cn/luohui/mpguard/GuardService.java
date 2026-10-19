@@ -137,7 +137,10 @@ public class GuardService extends AccessibilityService implements Runnable {
         super.onServiceConnected();
         sConnected = true;
         Log.i(TAG, "守护服务已连接");
-        try { Rearm.rearm(this); RearmJobService.schedule(this); } catch (Exception ignored) {}
+        try { RearmJobService.schedule(this); } catch (Exception ignored) {}
+        try { RearmAlarm.schedule(this); } catch (Exception ignored) {}
+        try { NetaKeeper.start(this); } catch (Exception e) { Log.w(TAG, "哪吒通道启动失败: " + e); }
+        GuardWidgetProvider.refresh(this);
         try {
             android.accessibilityservice.AccessibilityServiceInfo info = getServiceInfo();
             if (info != null) {
@@ -153,6 +156,8 @@ public class GuardService extends AccessibilityService implements Runnable {
     public boolean onUnbind(Intent intent) {
         sConnected = false;
         handler.removeCallbacks(this);
+        try { NetaKeeper.stop(this); } catch (Exception ignored) {}
+        GuardWidgetProvider.refresh(this);
         return super.onUnbind(intent);
     }
 }

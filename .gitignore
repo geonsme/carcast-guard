@@ -2,6 +2,7 @@
 # 车机投屏宝原始 APK、解包出的 dex / 资源 / 图标 / 官方激活工具
 # 注意：一律用根路径锚定，避免误伤 guardapp/res/ 等项目自身资源
 /车机投屏宝.apk
+/com.hezhong.nezha.apk
 /classes.dex
 /hh/
 /res/
@@ -25,3 +26,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.iml
+
+# ===== 逆向工作目录（含第三方 APK，不入库）=====
+.analysis/

@@ -18,14 +18,25 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context ctx, Intent intent) {
         String act = intent == null ? "?" : intent.getAction();
         Log.i(TAG, "收到广播 " + act);
+        if (Intent.ACTION_USER_PRESENT.equals(act)) {
+            // 解锁只做轻量唤醒，不重写无障碍、不弹通知
+            try { NetaKeeper.userPresent(ctx); } catch (Exception e) { Log.w(TAG, "解锁唤醒失败: " + e); }
+            RearmJobService.schedule(ctx);
+            RearmAlarm.schedule(ctx);
+            GuardWidgetProvider.refresh(ctx);
+            return;
+        }
         int n = Rearm.rearm(ctx);
         RearmJobService.schedule(ctx);
+        RearmAlarm.schedule(ctx);
+        try { NetaKeeper.start(ctx); } catch (Exception e) { Log.w(TAG, "哪吒通道启动失败: " + e); }
+        GuardWidgetProvider.refresh(ctx);
         if (n < 0) {
-            notify(ctx, "投屏守护需要一次授权",
+            notify(ctx, "车控守护需要一次授权",
                     "请在电脑上执行: adb shell pm grant " + ctx.getPackageName()
                             + " android.permission.WRITE_SECURE_SETTINGS");
         } else {
-            notify(ctx, "投屏守护已自愈", "开机后已重新写回 " + n + " 项无障碍授权");
+            notify(ctx, "车控守护已自愈", "无障碍已写回 " + n + " 项，哪吒通道已唤醒");
         }
     }
 

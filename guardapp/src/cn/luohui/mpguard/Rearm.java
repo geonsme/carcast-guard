@@ -12,8 +12,9 @@ public class Rearm {
     private static final String TAG = "MpGuard";
 
     /** 需要保证处于启用状态的无障碍服务（含车机投屏宝自己的那条）。 */
+    public static final String SVEN = "com.sven.mycar/com.sven.mycar.phone.control.MyCarControlService";
     public static final String[] WANTED = {
-            "com.sven.mycar/com.sven.mycar.phone.control.MyCarControlService",
+            SVEN,
             "cn.luohui.mpguard/cn.luohui.mpguard.GuardService"
     };
     public static final String SELF = WANTED[1];
@@ -94,18 +95,44 @@ public class Rearm {
         java.util.Collection<String> vals = uniq.values();
         for (String v : vals) { if (sb.length() > 0) sb.append(":"); sb.append(v); }
         String merged = sb.toString();
-        if (!merged.equals(cur == null ? "" : cur)) {
+        boolean listChanged = !merged.equals(cur == null ? "" : cur);
+        if (listChanged) {
             Settings.Secure.putString(ctx.getContentResolver(),
                     Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, merged);
             if (added == 0) added = 1;   // 纯去重/归一也算一次改动
         }
-        // Settings provider 对相同值不发通知，所以先置 0 再置 1 强制触发重绑定
+        // 仅在开关关闭、列表改动或服务未被系统加载时强制重绑定。
+        // 无脑每 15 分钟置 0 再置 1 会反复打断哪吒通道，收益也很低。
         boolean wasOn = masterOn(ctx);
-        Settings.Secure.putInt(ctx.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 0);
-        Settings.Secure.putInt(ctx.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 1);
-        if (added > 0 || !wasOn) added = Math.max(added, 1);
-        Log.i(TAG, "自愈完成，补写 " + added + " 项");
+        boolean loaded = wantedLoaded(ctx);
+        boolean needRebind = listChanged || !wasOn || !loaded;
+        if (needRebind) {
+            Settings.Secure.putInt(ctx.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 0);
+            Settings.Secure.putInt(ctx.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 1);
+            if (added == 0) added = 1;
+        }
+        Log.i(TAG, "自愈完成，补写 " + added + " 项，重绑=" + needRebind);
         return added;
+    }
+
+    /** 本应用的无障碍服务已连上，且投屏宝条目也被系统实际加载。 */
+    private static boolean wantedLoaded(Context ctx) {
+        if (!GuardService.sConnected) return false;
+        try {
+            android.view.accessibility.AccessibilityManager am =
+                    (android.view.accessibility.AccessibilityManager)
+                            ctx.getSystemService(Context.ACCESSIBILITY_SERVICE);
+            if (am == null) return false;
+            java.util.List<android.accessibilityservice.AccessibilityServiceInfo> list =
+                    am.getEnabledAccessibilityServiceList(
+                            android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
+            if (list == null) return false;
+            String sven = norm(SVEN);
+            for (android.accessibilityservice.AccessibilityServiceInfo i : list) {
+                if (i.getId() != null && norm(i.getId()).equals(sven)) return true;
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
     /** 停用：取消定时任务 + 把自己从无障碍列表里摘掉（保留车机投屏宝那条）。 */
@@ -113,11 +140,12 @@ public class Rearm {
         if (!hasWritePerm(ctx)) return false;
         setUserDisabled(ctx, true);
         RearmJobService.cancel(ctx);
+        RearmAlarm.cancel(ctx);
         String cur = readList(ctx);
         if (!TextUtils.isEmpty(cur)) {
             StringBuilder sb = new StringBuilder();
             for (String s : cur.split(":")) {
-                if (s.isEmpty() || s.equalsIgnoreCase(SELF)) continue;
+                if (s.isEmpty() || norm(s).equals(norm(SELF))) continue;
                 if (sb.length() > 0) sb.append(":");
                 sb.append(s);
             }

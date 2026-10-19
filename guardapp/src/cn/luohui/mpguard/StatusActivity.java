@@ -1,236 +1,695 @@
 package cn.luohui.mpguard;
 
 import android.accessibilityservice.AccessibilityServiceInfo;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.Activity;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
+import android.app.Dialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.TextUtils;
+import android.os.PowerManager;
+import android.provider.Settings;
+import android.util.TypedValue;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityManager;
-import android.widget.Button;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
-/** 状态页：解析出每个无障碍条目对应的真实 App 名称，并给出明确的操作反馈。 */
-public class StatusActivity extends Activity implements View.OnClickListener, Runnable {
+/** 车控守护仪表盘：守护指数、双目标遥测、系统条件与一键操作。 */
+public class StatusActivity extends Activity implements View.OnClickListener {
 
-    private static final int OK = Color.parseColor("#84D87B");
-    private static final int WARN = Color.parseColor("#FFB74D");
-    private static final int ERR = Color.parseColor("#E57373");
-    private static final int FG = Color.parseColor("#E8EAED");
-    private static final int BG = Color.parseColor("#141618");
+    private static final String UI_PREFS = "guard_ui";
 
-    private TextView overview, detail, result;
-    private Button btnCheck, btnRearm, btnToggle, btnJump;
+    private int C_OK;
+    private int C_WARN;
+    private int C_ERR;
+    private int C_MUTED;
+    private int C_TEXT;
+    private int C_TEXT2;
+
+    private View headerPill;
+    private View headerDot;
+    private TextView headerStatus;
+    private TextView heroHeadline;
+    private TextView heroSub;
+    private TextView pillAccess;
+    private TextView pillBind;
+    private TextView pillHeal;
+    private ProtectionGaugeView gauge;
+    private LinearLayout targetsContainer;
+    private LinearLayout conditionsContainer;
+    private TextView lastAction;
+    private TextView lastActionTime;
+    private TextView btnRearm;
+    private TextView btnCheck;
+    private TextView btnToggle;
+    private ImageButton btnJump;
+
+    private TargetCard svenCard;
+    private TargetCard netaCard;
+    private final List<CondRow> condRows = new ArrayList<CondRow>();
+
     private final Handler h = new Handler(Looper.getMainLooper());
-    private int pending = 0;   // 1=自愈 2=检测 3=停用 4=启用
-    private boolean busy = false;
+    private boolean busy;
+    private ObjectAnimator pulse;
     private Refresher refresher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_status);
 
-        LinearLayout col = new LinearLayout(this);
-        col.setOrientation(LinearLayout.VERTICAL);
-        col.setPadding(48, 56, 48, 48);
-        col.setBackgroundColor(BG);
+        C_OK = getColor(R.color.accent);
+        C_WARN = getColor(R.color.warn);
+        C_ERR = getColor(R.color.err);
+        C_MUTED = getColor(R.color.text_muted);
+        C_TEXT = getColor(R.color.text_primary);
+        C_TEXT2 = getColor(R.color.text_secondary);
 
-        overview = mkText(22, true);
-        col.addView(overview);
-        detail = mkText(15, false);
-        detail.setPadding(0, 28, 0, 20);
-        col.addView(detail);
-        result = mkText(15, false);
-        result.setPadding(0, 8, 0, 26);
-        col.addView(result);
+        bindViews();
+        setupTargets();
+        setupConditions();
+        setupClicks();
+        loadLastAction();
+        startPulse();
 
-        btnRearm = mkBtn("立即自愈");
-        btnCheck = mkBtn("重新检测");
-        btnToggle = mkBtn("停用守护");
-        btnJump = mkBtn("打开系统无障碍设置");
-        col.addView(btnRearm);
-        col.addView(btnCheck);
-        col.addView(btnToggle);
-        col.addView(btnJump);
-
-        btnRearm.setOnClickListener(this);
-        btnCheck.setOnClickListener(this);
-        btnToggle.setOnClickListener(this);
-        btnJump.setOnClickListener(this);
-
-        // 用户主动停用过，就不要自作主张再启用
-        if (wantOff()) {
-            setLastResult("你已停用守护 —— 不会自愈，重启后也不会自启", WARN);
+        if (Rearm.userDisabled(this)) {
+            NetaKeeper.stop(this);
         } else {
             RearmJobService.schedule(this);
-            try { Rearm.rearm(this); } catch (Exception ignored) {}
-            setLastResult("进入页面时已自动检查一遍", OK);
+            RearmAlarm.schedule(this);
+            autoRepairIfNeeded();
+            NetaKeeper.start(this);
+            GuardWidgetProvider.refresh(this);
         }
 
-        ScrollView sv = new ScrollView(this);
-        sv.setBackgroundColor(BG);
-        sv.addView(col);
-        setContentView(sv);
-        getWindow().getDecorView().setBackgroundColor(BG);
-        render();
+        render(true);
+        playEntrance();
     }
 
-    private TextView mkText(float size, boolean bold) {
-        TextView t = new TextView(this);
-        t.setTextSize(size);
-        t.setTextColor(bold ? OK : FG);
-        if (bold) t.setTypeface(t.getTypeface(), android.graphics.Typeface.BOLD);
-        return t;
+    private void bindViews() {
+        headerPill = findViewById(R.id.headerPill);
+        headerDot = findViewById(R.id.headerDot);
+        headerStatus = (TextView) findViewById(R.id.headerStatus);
+        heroHeadline = (TextView) findViewById(R.id.heroHeadline);
+        heroSub = (TextView) findViewById(R.id.heroSub);
+        pillAccess = (TextView) findViewById(R.id.pillAccess);
+        pillBind = (TextView) findViewById(R.id.pillBind);
+        pillHeal = (TextView) findViewById(R.id.pillHeal);
+        gauge = (ProtectionGaugeView) findViewById(R.id.gauge);
+        targetsContainer = (LinearLayout) findViewById(R.id.targetsContainer);
+        conditionsContainer = (LinearLayout) findViewById(R.id.conditionsCard);
+        lastAction = (TextView) findViewById(R.id.lastAction);
+        lastActionTime = (TextView) findViewById(R.id.lastActionTime);
+        btnRearm = (TextView) findViewById(R.id.btnRearm);
+        btnCheck = (TextView) findViewById(R.id.btnCheck);
+        btnToggle = (TextView) findViewById(R.id.btnToggle);
+        btnJump = (ImageButton) findViewById(R.id.btnJump);
     }
 
-    private Button mkBtn(String label) {
-        Button b = new Button(this);
-        b.setText(label);
-        b.setAllCaps(false);
+    private void setupTargets() {
+        LayoutInflater inf = LayoutInflater.from(this);
+
+        View svenView = inf.inflate(R.layout.item_target, targetsContainer, false);
+        svenCard = new TargetCard(svenView);
+        svenCard.icon.setImageResource(R.drawable.ic_cast);
+        svenCard.name.setText(R.string.target_sven);
+        svenCard.pkg.setText("com.sven.mycar");
+        svenCard.action.setVisibility(View.GONE);
+        targetsContainer.addView(svenView);
+
+        View netaView = inf.inflate(R.layout.item_target, targetsContainer, false);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = 12;
-        b.setLayoutParams(lp);
-        return b;
+        lp.topMargin = dp(10);
+        netaCard = new TargetCard(netaView);
+        netaCard.icon.setImageResource(R.drawable.ic_bolt);
+        netaCard.name.setText(R.string.target_neta);
+        netaCard.pkg.setText(NetaKeeper.PKG);
+        netaCard.action.setVisibility(View.VISIBLE);
+        netaCard.action.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { rebindNeta(); }
+        });
+        targetsContainer.addView(netaView, lp);
     }
 
-    // ---------- 操作反馈 ----------
-
-    private String now() {
-        return new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
-    }
-
-    private void setLastResult(String msg, int color) {
-        result.setText("最近操作  " + now() + "\n" + msg);
-        result.setTextColor(color);
-    }
-
-    private void toast(String msg) { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show(); }
-
-    private void startBusy(int mode, Button b, String doing) {
-        if (busy) return;
-        busy = true;
-        pending = mode;
-        b.setText(doing);
-        b.setEnabled(false);
-        h.postDelayed(this, 450);
-    }
-
-    @Override
-    public void run() {
-        Button b = null;
-        String label = null;
-        boolean selfBefore = guardEnabled();
-        switch (pending) {
-            case 1: b = btnRearm; label = "立即自愈"; break;
-            case 2: b = btnCheck; label = "重新检测"; break;
-            case 3: b = btnToggle; label = selfBefore ? "停用守护" : "启用守护"; break;
-            case 4: b = btnToggle; label = selfBefore ? "停用守护" : "启用守护"; break;
+    private void setupConditions() {
+        String[] titles = {"无障碍总开关", "自愈权限", "持久体检", "电池优化豁免"};
+        String[] subs = {"ACCESSIBILITY MASTER", "WRITE_SECURE_SETTINGS",
+                "DUAL ALARM 10 MIN · JOB 15 MIN", "DOZE WHITELIST"};
+        LayoutInflater inf = LayoutInflater.from(this);
+        for (int i = 0; i < titles.length; i++) {
+            View v = inf.inflate(R.layout.item_condition, conditionsContainer, false);
+            CondRow row = new CondRow(v);
+            row.title.setText(titles[i]);
+            row.sub.setText(subs[i]);
+            conditionsContainer.addView(v);
+            condRows.add(row);
         }
-        int mode = pending;
-        pending = 0;
-        try {
-            if (mode == 1) {
-                int n = Rearm.rearm(this);
-                String m = n == -2 ? "你已停用守护，未执行自愈"
-                        : (n < 0 ? "失败：缺少 WRITE_SECURE_SETTINGS，需用 adb 授予"
-                        : (n == 0 ? "无需修复 —— 授权本来就完好" : "已补写 " + n + " 项，并强制系统重新绑定"));
-                setLastResult(m, n == -2 ? WARN : (n < 0 ? ERR : OK));
-                toast(m);
-            } else if (mode == 2) {
-                setLastResult("已重新读取系统状态", OK);
-                toast("已刷新");
-            } else if (mode == 3) {
-                boolean ok = Rearm.disable(this);
-                setWantOff(true);
-                String m = ok ? "已停用：定时任务取消，自身无障碍条目已摘除"
-                        : "停用失败：缺少 WRITE_SECURE_SETTINGS";
-                setLastResult(m, ok ? WARN : ERR);
-                toast(m);
-            } else if (mode == 4) {
-                setWantOff(false);
-                int n = Rearm.rearm(this);
-                RearmJobService.schedule(this);
-                String m = n < 0 ? "启用失败：缺少 WRITE_SECURE_SETTINGS" : "已重新启用守护";
-                setLastResult(m, n < 0 ? ERR : OK);
-                toast(m);
+
+        TypedValue tv = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
+
+        CondRow permRow = condRows.get(1);
+        permRow.root.setClickable(true);
+        permRow.root.setBackgroundResource(tv.resourceId);
+        permRow.root.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (Rearm.hasWritePerm(StatusActivity.this)) {
+                    toast("自愈权限已授予");
+                } else {
+                    showPermDialog();
+                }
             }
-        } catch (Exception e) {
-            setLastResult("操作异常：" + e, ERR);
-        } finally {
-            busy = false;
-            if (b != null && label != null) { b.setText(label); b.setEnabled(true); }
-            render();
+        });
+
+        CondRow batteryRow = condRows.get(3);
+        batteryRow.root.setClickable(true);
+        batteryRow.root.setBackgroundResource(tv.resourceId);
+        batteryRow.root.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                try {
+                    startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                } catch (Exception e) {
+                    toast("无法打开电池优化设置");
+                }
+            }
+        });
+    }
+
+    private void setupClicks() {
+        btnRearm.setOnClickListener(this);
+        btnCheck.setOnClickListener(this);
+        btnJump.setOnClickListener(this);
+        btnToggle.setOnClickListener(this);
+    }
+
+    private void autoRepairIfNeeded() {
+        if (!Rearm.hasWritePerm(this)) return;
+        String list = Rearm.readList(this);
+        if (!Rearm.masterOn(this)
+                || !Rearm.contains(list, Rearm.SELF)
+                || !Rearm.contains(list, Rearm.SVEN)) {
+            try { Rearm.rearm(this); } catch (Exception ignored) {}
         }
     }
+
+    // ---------- 操作 ----------
 
     @Override
     public void onClick(View v) {
-        if (v == btnRearm) startBusy(1, btnRearm, "正在自愈…");
-        else if (v == btnCheck) startBusy(2, btnCheck, "检测中…");
-        else if (v == btnJump) startActivity(Rearm.settingsIntent());
-        else if (v == btnToggle) {
-            if (guardEnabled()) startBusy(3, btnToggle, "正在停用…");
-            else startBusy(4, btnToggle, "正在启用…");
+        if (v == btnRearm) {
+            if (Rearm.userDisabled(this)) enableGuard();
+            else healGuard();
+        } else if (v == btnCheck) {
+            checkNow();
+        } else if (v == btnJump) {
+            startActivity(Rearm.settingsIntent());
+        } else if (v == btnToggle) {
+            if (Rearm.userDisabled(this)) enableGuard();
+            else showStopDialog();
         }
     }
 
-    // ---------- 状态渲染 ----------
+    private void healGuard() {
+        if (busy) return;
+        setBusy(true);
+        String msg;
+        try {
+            int n = Rearm.rearm(this);
+            RearmJobService.schedule(this);
+            RearmAlarm.schedule(this);
+            if (n == -2) {
+                msg = "守护已停用 · 未执行自愈";
+            } else if (n < 0) {
+                msg = "自愈失败 · 缺少 WRITE_SECURE_SETTINGS";
+                showPermDialog();
+            } else {
+                NetaKeeper.kick(this);
+                msg = n == 0 ? "自愈完成 · 授权本来就完好" : "自愈完成 · 补写 " + n + " 项授权";
+            }
+        } catch (Exception e) {
+            msg = "自愈异常 · " + e.getClass().getSimpleName();
+        } finally {
+            setBusy(false);
+        }
+        record(msg);
+        toast(msg);
+        GuardWidgetProvider.refresh(this);
+        render(true);
+    }
+
+    private void enableGuard() {
+        if (busy) return;
+        setBusy(true);
+        String msg;
+        try {
+            Rearm.setUserDisabled(this, false);
+            int n = Rearm.rearm(this);
+            RearmJobService.schedule(this);
+            RearmAlarm.schedule(this);
+            NetaKeeper.start(this);
+            NetaKeeper.kick(this);
+            if (n < 0) {
+                msg = "启用失败 · 缺少 WRITE_SECURE_SETTINGS";
+                showPermDialog();
+            } else {
+                msg = "守护已恢复 · 双通道启动";
+            }
+        } catch (Exception e) {
+            msg = "启用异常 · " + e.getClass().getSimpleName();
+        } finally {
+            setBusy(false);
+        }
+        record(msg);
+        toast(msg);
+        GuardWidgetProvider.refresh(this);
+        render(true);
+    }
+
+    private void disableGuard() {
+        if (busy) return;
+        boolean ok = Rearm.disable(this);
+        NetaKeeper.stop(this);
+        String msg = ok ? "守护已停用 · 定时任务与哪吒绑定已停止"
+                : "停用失败 · 缺少 WRITE_SECURE_SETTINGS";
+        record(msg);
+        toast(msg);
+        GuardWidgetProvider.refresh(this);
+        render(false);
+    }
+
+    private void checkNow() {
+        if (busy) return;
+        if (!Rearm.userDisabled(this)) {
+            RearmJobService.schedule(this);
+            RearmAlarm.schedule(this);
+            NetaKeeper.kick(this);
+        }
+        String msg = Rearm.userDisabled(this) ? "状态刷新 · 守护当前已停用"
+                : "状态刷新 · 哪吒通道已唤醒";
+        record(msg);
+        toast("状态已刷新");
+        GuardWidgetProvider.refresh(this);
+        render(false);
+    }
+
+    private void rebindNeta() {
+        if (Rearm.userDisabled(this)) {
+            toast("守护已停用，请先恢复守护");
+            return;
+        }
+        if (!NetaKeeper.isInstalled(this)) {
+            toast("未检测到哪吒汽车 App");
+            return;
+        }
+        NetaKeeper.requestRebind(this);
+        GuardWidgetProvider.refresh(this);
+        record("人工重连 · 哪吒 MQTT 通道");
+        toast("正在重新绑定哪吒通道");
+        h.postDelayed(new Runnable() {
+            @Override public void run() { render(false); }
+        }, 1400);
+    }
+
+    private void setBusy(boolean v) {
+        busy = v;
+        btnRearm.setEnabled(!v);
+        btnCheck.setEnabled(!v);
+        btnToggle.setEnabled(!v);
+    }
+
+    private void copyToClipboard(String text) {
+        try {
+            ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("adb", text));
+        } catch (Exception ignored) {}
+    }
+
+    // ---------- 弹窗 ----------
+
+    private Dialog buildDialog(int titleRes, String message) {
+        Dialog d = new Dialog(this);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        d.setContentView(R.layout.dialog_confirm);
+        ((TextView) d.findViewById(R.id.dlgTitle)).setText(titleRes);
+        ((TextView) d.findViewById(R.id.dlgMessage)).setText(message);
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            WindowManager.LayoutParams lp = w.getAttributes();
+            lp.dimAmount = 0.66f;
+            w.setAttributes(lp);
+        }
+        return d;
+    }
+
+    private void present(Dialog d) {
+        d.show();
+        Window w = d.getWindow();
+        if (w != null) {
+            int width = (int) (getResources().getDisplayMetrics().widthPixels * 0.88f);
+            w.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void showStopDialog() {
+        final Dialog d = buildDialog(R.string.dialog_stop_title, getString(R.string.dialog_stop_msg));
+        TextView ok = (TextView) d.findViewById(R.id.dlgOk);
+        ok.setText(R.string.dialog_stop_confirm);
+        ok.setBackgroundResource(R.drawable.bg_btn_danger);
+        ok.setTextColor(C_ERR);
+        d.findViewById(R.id.dlgCancel).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { d.dismiss(); }
+        });
+        ok.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                d.dismiss();
+                disableGuard();
+            }
+        });
+        present(d);
+    }
+
+    private void showPermDialog() {
+        final String cmd = getString(R.string.perm_command, getPackageName());
+        final Dialog d = buildDialog(R.string.dialog_perm_title, getString(R.string.dialog_perm_msg));
+        TextView command = (TextView) d.findViewById(R.id.dlgCommand);
+        command.setVisibility(View.VISIBLE);
+        command.setText(cmd);
+
+        TextView ok = (TextView) d.findViewById(R.id.dlgOk);
+        ok.setText(R.string.dialog_perm_copy);
+        ok.setBackgroundResource(R.drawable.bg_btn_primary);
+        ok.setTextColor(getColor(R.color.ink));
+        d.findViewById(R.id.dlgCancel).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { d.dismiss(); }
+        });
+        ok.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                copyToClipboard(cmd);
+                d.dismiss();
+                toast("命令已复制，粘贴到电脑终端执行");
+            }
+        });
+        present(d);
+    }
+
+    // ---------- 渲染 ----------
 
     private boolean wantOff() { return Rearm.userDisabled(this); }
 
-    private void setWantOff(boolean v) { Rearm.setUserDisabled(this, v); }
+    private void render(boolean animate) {
+        if (busy) return;
 
-    private boolean guardEnabled() {
-        return Rearm.contains(Rearm.readList(this), Rearm.SELF);
+        boolean off = wantOff();
+        boolean perm = Rearm.hasWritePerm(this);
+        String list = Rearm.readList(this);
+        boolean master = Rearm.masterOn(this);
+        boolean selfIn = Rearm.contains(list, Rearm.SELF);
+        boolean svenIn = Rearm.contains(list, Rearm.SVEN);
+        HashSet<String> loaded = loadedIds();
+        boolean selfLoaded = master && selfIn
+                && (GuardService.sConnected || loaded.contains(norm(Rearm.SELF)));
+        boolean svenLoaded = master && svenIn && loaded.contains(norm(Rearm.SVEN));
+        boolean job = RearmJobService.isScheduled(this);
+        boolean netaInstalled = NetaKeeper.isInstalled(this);
+        boolean netaBound = NetaKeeper.isBound();
+        boolean netaRunning = NetaKeeper.isRunning();
+        boolean svenInstalled = installed("com.sven.mycar");
+
+        int score = 0;
+        if (selfIn) score += 10;
+        if (selfLoaded) score += 15;
+        if (svenIn) score += 10;
+        if (svenLoaded) score += 15;
+        if (job) score += 15;
+        if (perm) score += 15;
+        if (netaBound) score += 20;
+        if (off) score = 0;
+        int scoreColor = off ? C_WARN : (score >= 90 ? C_OK : (score >= 60 ? C_WARN : C_ERR));
+        gauge.setScore(score, scoreColor, animate);
+
+        String head;
+        int headColor;
+        if (off) { head = "已停用"; headColor = C_MUTED; }
+        else if (!perm) { head = "待授权"; headColor = C_ERR; }
+        else if (!master || !selfIn || !selfLoaded) { head = "待激活"; headColor = C_ERR; }
+        else if (!netaInstalled) { head = "仅投屏"; headColor = C_WARN; }
+        else if (!netaBound) { head = "重连中"; headColor = C_WARN; }
+        else if (!svenLoaded || !job) { head = "需关注"; headColor = C_WARN; }
+        else { head = "守护中"; headColor = C_OK; }
+        headerStatus.setText(head);
+        headerStatus.setTextColor(headColor == C_MUTED ? C_TEXT2 : headColor);
+        headerPill.setBackgroundResource(pillBg(headColor));
+        headerDot.setBackgroundTintList(ColorStateList.valueOf(headColor));
+
+        String headline;
+        String sub;
+        if (off) {
+            headline = "守护已暂停";
+            sub = "重新启用后恢复自愈与哪吒绑定";
+        } else if (!perm) {
+            headline = "缺少自愈权限";
+            sub = "连接电脑授予一次，即可自动修复";
+        } else if (!master || !selfIn || !selfLoaded) {
+            headline = "无障碍通道未加载";
+            sub = "在系统设置中重新启用本服务";
+        } else if (!netaInstalled) {
+            headline = "未检测到哪吒汽车";
+            sub = "安装并登录后即可自动接入守护";
+        } else if (!netaBound) {
+            headline = "哪吒通道正在重连";
+            sub = "保持 MQTT 服务绑定 · 自动恢复进程优先级";
+        } else if (!svenInstalled) {
+            headline = "未检测到车机投屏宝";
+            sub = "安装后本应用会自动接管投屏授权";
+        } else if (!svenLoaded) {
+            headline = "投屏宝通道未就绪";
+            sub = "检查无障碍列表中的投屏宝服务";
+        } else if (!job) {
+            headline = "定时体检未登记";
+            sub = "点击立即自愈重新登记持久任务";
+        } else {
+            headline = "双通道守护在线";
+            sub = "投屏宝 · 哪吒汽车 · 本机离线守护";
+        }
+        heroHeadline.setText(headline);
+        heroSub.setText(sub);
+
+        String accessText;
+        int accessColor;
+        if (off) { accessText = "无障碍 暂停"; accessColor = C_MUTED; }
+        else if (!master) { accessText = "无障碍 关闭"; accessColor = C_ERR; }
+        else if (selfLoaded) { accessText = "无障碍 正常"; accessColor = C_OK; }
+        else if (selfIn) { accessText = "无障碍 待载"; accessColor = C_WARN; }
+        else { accessText = "无障碍 未载"; accessColor = C_ERR; }
+        applyPill(pillAccess, accessText, accessColor);
+
+        String bindText;
+        int bindColor;
+        if (off) { bindText = "绑定 停止"; bindColor = C_MUTED; }
+        else if (!netaInstalled) { bindText = "绑定 未装"; bindColor = C_ERR; }
+        else if (netaBound) { bindText = "绑定 在线"; bindColor = C_OK; }
+        else { bindText = "绑定 重连"; bindColor = C_WARN; }
+        applyPill(pillBind, bindText, bindColor);
+
+        String healText;
+        int healColor;
+        if (off) { healText = "自愈 停止"; healColor = C_MUTED; }
+        else if (!perm) { healText = "自愈 缺权"; healColor = C_ERR; }
+        else if (!job) { healText = "自愈 未登记"; healColor = C_WARN; }
+        else if (!selfLoaded) { healText = "自愈 待唤醒"; healColor = C_WARN; }
+        else { healText = "自愈 就绪"; healColor = C_OK; }
+        applyPill(pillHeal, healText, healColor);
+
+        // 投屏宝
+        if (!svenInstalled) {
+            applyPill(svenCard.pill, "未安装", C_ERR);
+            svenCard.setRow(0, "应用状态", "未安装", C_ERR);
+            svenCard.setRow(1, "无障碍通道", "—", C_MUTED);
+            svenCard.setRow(2, "投屏弹窗", "—", C_MUTED);
+        } else {
+            svenCard.setRow(0, "无障碍通道",
+                    svenIn ? (svenLoaded ? "已加载" : "待系统加载") : "未启用",
+                    svenLoaded ? C_OK : (svenIn ? C_WARN : C_ERR));
+            svenCard.setRow(1, "投屏弹窗",
+                    selfLoaded ? "自动放行" : "未接管",
+                    selfLoaded ? C_OK : C_MUTED);
+            int clicks = GuardService.clickedCount();
+            svenCard.setRow(2, "本次运行", clicks + " 次放行", clicks > 0 ? C_OK : C_MUTED);
+            String pt;
+            int pc;
+            if (svenLoaded) { pt = "守护中"; pc = C_OK; }
+            else if (svenIn && master) { pt = "待加载"; pc = C_WARN; }
+            else if (off) { pt = "已停用"; pc = C_MUTED; }
+            else { pt = "未启用"; pc = C_ERR; }
+            applyPill(svenCard.pill, pt, pc);
+        }
+
+        // 哪吒
+        if (!netaInstalled) {
+            applyPill(netaCard.pill, "未安装", C_ERR);
+            netaCard.setRow(0, "MQTT 绑定", "—", C_MUTED);
+            netaCard.setRow(1, "心跳唤醒", "—", C_MUTED);
+            netaCard.setRow(2, "双路闹钟", "—", C_MUTED);
+            netaCard.action.setVisibility(View.GONE);
+        } else {
+            netaCard.action.setVisibility(off ? View.GONE : View.VISIBLE);
+            String pt;
+            int pc;
+            if (off) { pt = "已暂停"; pc = C_MUTED; }
+            else if (netaBound) { pt = "守护中"; pc = C_OK; }
+            else if (netaRunning) { pt = "重连中"; pc = C_WARN; }
+            else { pt = "待激活"; pc = C_WARN; }
+            applyPill(netaCard.pill, pt, pc);
+
+            netaCard.setRow(0, "MQTT 绑定",
+                    off ? "已暂停" : (netaBound ? "已连接 · 自动重连"
+                            : (netaRunning ? "绑定中 · 稍候重试" : "未启动")),
+                    off ? C_MUTED : (netaBound ? C_OK : C_WARN));
+
+            long hb = NetaKeeper.lastHeartbeatAt();
+            String hbText;
+            int hbColor;
+            if (off) { hbText = "已暂停"; hbColor = C_MUTED; }
+            else if (hb <= 0) { hbText = "待发送 · 每 2 分钟"; hbColor = C_WARN; }
+            else {
+                hbText = ago(hb) + " · 每 2 分钟";
+                hbColor = System.currentTimeMillis() - hb <= 3 * 60_000L ? C_OK : C_WARN;
+            }
+            netaCard.setRow(1, "心跳唤醒", hbText, hbColor);
+
+            boolean armed = RearmAlarm.isArmed();
+            netaCard.setRow(2, "双路闹钟",
+                    off ? "已暂停" : (armed ? "已布防 · 每 10 分钟" : "未布防"),
+                    off ? C_MUTED : (armed ? C_OK : C_WARN));
+        }
+
+        // 系统条件
+        String accessValue;
+        int accessState;
+        if (!master) { accessValue = "未开启"; accessState = 2; }
+        else if (!selfIn) { accessValue = "缺本应用"; accessState = 2; }
+        else if (!selfLoaded) { accessValue = "待加载"; accessState = 1; }
+        else { accessValue = "已开启"; accessState = 0; }
+        setCond(0, accessValue, accessState);
+        setCond(1, perm ? "已授予" : "需 ADB", perm ? 0 : 2);
+        setCond(2, job ? "10 分钟双路兜底" : "未登记", job ? 0 : 1);
+
+        int dozeTotal = 0;
+        int dozeOk = 0;
+        String selfPkg = getPackageName();
+        if (installed(selfPkg)) { dozeTotal++; if (ignoring(selfPkg)) dozeOk++; }
+        if (svenInstalled) { dozeTotal++; if (ignoring("com.sven.mycar")) dozeOk++; }
+        if (netaInstalled) { dozeTotal++; if (ignoring(NetaKeeper.PKG)) dozeOk++; }
+        String dozeValue;
+        int dozeState;
+        if (dozeTotal == 0) { dozeValue = "—"; dozeState = 2; }
+        else if (dozeOk == dozeTotal) { dozeValue = "全部豁免"; dozeState = 0; }
+        else if (dozeOk == 0) { dozeValue = "未豁免"; dozeState = 2; }
+        else { dozeValue = "部分豁免"; dozeState = 1; }
+        setCond(3, dozeValue, dozeState);
+
+        btnRearm.setText(off ? R.string.btn_restore : R.string.btn_heal);
+        btnToggle.setText(off ? R.string.btn_enable : R.string.btn_disable);
+        btnToggle.setTextColor(off ? C_OK : C_TEXT2);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        render();
-        if (refresher == null) refresher = new Refresher(this);
-        h.removeCallbacks(refresher);
-        h.postDelayed(refresher, 3000);
+    private void applyPill(TextView tv, String text, int color) {
+        tv.setText(text);
+        tv.setTextColor(color == C_MUTED ? C_TEXT2 : color);
+        tv.setBackgroundResource(pillBg(color));
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (refresher != null) h.removeCallbacks(refresher);
+    private int pillBg(int color) {
+        if (color == C_OK) return R.drawable.bg_pill_ok;
+        if (color == C_WARN) return R.drawable.bg_pill_warn;
+        if (color == C_ERR) return R.drawable.bg_pill_err;
+        return R.drawable.bg_pill_neutral;
     }
 
-    /** 命名静态嵌套类（匿名内部类会让本项目的 R8 版本崩溃）。 */
-    private static class Refresher implements Runnable {
-        private final StatusActivity a;
-        Refresher(StatusActivity a) { this.a = a; }
-        @Override public void run() {
-            if (a == null || a.isFinishing()) return;
-            if (!a.busy) a.render();
-            a.h.postDelayed(this, 3000);
+    private void setCond(int index, String value, int state) {
+        if (index < 0 || index >= condRows.size()) return;
+        CondRow row = condRows.get(index);
+        row.value.setText(value);
+        int icon;
+        int color;
+        if (state == 0) {
+            icon = R.drawable.ic_check_circle;
+            color = C_OK;
+        } else if (state == 1) {
+            icon = R.drawable.ic_alert;
+            color = C_WARN;
+        } else {
+            icon = R.drawable.ic_close_circle;
+            color = C_ERR;
+        }
+        row.icon.setImageResource(icon);
+        row.icon.setColorFilter(color);
+        row.value.setTextColor(state == 0 ? C_TEXT : color);
+    }
+
+    // ---------- 小工具 ----------
+
+    private String ago(long at) {
+        long d = System.currentTimeMillis() - at;
+        if (d < 45_000L) return "刚刚";
+        if (d < 3_600_000L) return Math.max(1, d / 60_000L) + " 分钟前";
+        if (d < 86_400_000L) return Math.max(1, d / 3_600_000L) + " 小时前";
+        return Math.max(1, d / 86_400_000L) + " 天前";
+    }
+
+    private boolean installed(String pkg) {
+        try {
+            getPackageManager().getPackageInfo(pkg, 0);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
-    /**
-     * 归一化组件标识：设置列表里是全写 "pkg/pkg.Cls"，
-     * 而 AccessibilityServiceInfo.getId() 常给缩写 "pkg/.Cls"，必须统一后再比对。
-     */
+    private boolean ignoring(String pkg) {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            return pm != null && pm.isIgnoringBatteryOptimizations(pkg);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private int dp(int v) {
+        return Math.round(v * getResources().getDisplayMetrics().density);
+    }
+
     private static String norm(String comp) {
         if (comp == null) return "";
-        android.content.ComponentName cn = android.content.ComponentName.unflattenFromString(comp);
+        android.content.ComponentName cn =
+                android.content.ComponentName.unflattenFromString(comp);
         if (cn == null) return comp.trim().toLowerCase(Locale.ROOT);
         return (cn.getPackageName() + "/" + cn.getClassName()).toLowerCase(Locale.ROOT);
     }
@@ -243,67 +702,167 @@ public class StatusActivity extends Activity implements View.OnClickListener, Ru
                 List<AccessibilityServiceInfo> l =
                         am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
                 if (l != null) {
-                    for (AccessibilityServiceInfo i : l) if (i.getId() != null) s.add(norm(i.getId()));
+                    for (AccessibilityServiceInfo i : l) {
+                        if (i.getId() != null) s.add(norm(i.getId()));
+                    }
                 }
             }
         } catch (Exception ignored) {}
         return s;
     }
 
-    private String appLabel(String pkg) {
-        try {
-            PackageManager pm = getPackageManager();
-            ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
-            return pm.getApplicationLabel(ai).toString();
-        } catch (Exception e) { return "（未知应用）"; }
+    private void toast(String msg) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
-    private void render() {
-        String list = Rearm.readList(this);
-        boolean master = Rearm.masterOn(this);
-        boolean selfOn = guardEnabled();
-        boolean jobOn = RearmJobService.isScheduled(this);
-        boolean perm = Rearm.hasWritePerm(this);
-        HashSet<String> loaded = loadedIds();
+    // ---------- 运行记录 ----------
 
-        StringBuilder d = new StringBuilder();
-        int idx = 1;
-        if (TextUtils.isEmpty(list)) {
-            d.append("无障碍列表为空\n\n");
-        } else {
-            String[] parts = list.split(":");
-            for (int i = 0; i < parts.length; i++) {
-                String comp = parts[i];
-                if (comp.length() == 0) continue;
-                int slash = comp.indexOf('/');
-                String pkg = slash > 0 ? comp.substring(0, slash) : comp;
-                String cls = slash > 0 ? comp.substring(slash + 1) : "";
-                boolean isSelf = comp.equalsIgnoreCase(Rearm.SELF);
-                boolean isLoaded = loaded.contains(norm(comp));
-                d.append(idx++).append(".  ").append(appLabel(pkg))
-                 .append(isSelf ? "　（本应用）" : "").append("\n")
-                 .append("      服务　").append(cls).append("\n")
-                 .append("      已启用　是")
-                 .append("　　已被系统加载　").append(isLoaded ? "是" : "否").append("\n\n");
-            }
+    private void loadLastAction() {
+        SharedPreferences sp = getSharedPreferences(UI_PREFS, MODE_PRIVATE);
+        updateLog(sp.getString("last", getString(R.string.log_waiting)), sp.getLong("last_at", 0));
+    }
+
+    private void record(String msg) {
+        long now = System.currentTimeMillis();
+        getSharedPreferences(UI_PREFS, MODE_PRIVATE).edit()
+                .putString("last", msg)
+                .putLong("last_at", now)
+                .apply();
+        updateLog(msg, now);
+    }
+
+    private void updateLog(String msg, long at) {
+        lastAction.setText(msg);
+        if (at <= 0) {
+            lastActionTime.setText(R.string.log_auto);
+            return;
         }
-        d.append("自愈定时任务　").append(jobOn ? "已登记（约每 15 分钟）" : "未登记 —— 重启后不会自愈").append("\n");
-        d.append("WRITE_SECURE_SETTINGS　").append(perm ? "已授予" : "未授予");
-        detail.setText(d.toString());
-        detail.setTextColor(FG);
+        String time = new SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault())
+                .format(new Date(at));
+        lastActionTime.setText(time + "  ·  手动操作");
+    }
 
-        String ov;
-        int c;
-        boolean selfLoaded = loaded.contains(norm(Rearm.SELF));
-        if (!selfOn) { ov = "守护状态：已停用"; c = WARN; }
-        else if (master && jobOn && perm && selfLoaded) { ov = "守护状态：正常"; c = OK; }
-        else if (!perm) { ov = "守护状态：缺自愈权限"; c = ERR; }
-        else if (!selfLoaded) { ov = "守护状态：未被系统加载"; c = ERR; }
-        else if (!jobOn) { ov = "守护状态：不完整（缺定时任务）"; c = WARN; }
-        else { ov = "守护状态：总开关未打开"; c = WARN; }
-        overview.setText(ov);
-        overview.setTextColor(c);
+    // ---------- 动效 ----------
 
-        btnToggle.setText(selfOn ? "停用守护" : "启用守护");
+    private void startPulse() {
+        pulse = ObjectAnimator.ofFloat(headerDot, "alpha", 1f, 0.35f);
+        pulse.setDuration(1250);
+        pulse.setRepeatCount(ValueAnimator.INFINITE);
+        pulse.setRepeatMode(ValueAnimator.REVERSE);
+        pulse.start();
+    }
+
+    private void playEntrance() {
+        View[] views = {
+                findViewById(R.id.header),
+                findViewById(R.id.heroCard),
+                findViewById(R.id.sectionTargets),
+                targetsContainer,
+                findViewById(R.id.sectionConditions),
+                conditionsContainer,
+                findViewById(R.id.sectionLog),
+                findViewById(R.id.logCard),
+                findViewById(R.id.footer)
+        };
+        for (int i = 0; i < views.length; i++) {
+            View v = views[i];
+            if (v == null) continue;
+            v.setAlpha(0f);
+            v.setTranslationY(dp(14));
+            v.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setStartDelay(40L + i * 55L)
+                    .setDuration(430)
+                    .setInterpolator(new DecelerateInterpolator(1.5f))
+                    .start();
+        }
+    }
+
+    // ---------- 生命周期 ----------
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (Rearm.userDisabled(this)) NetaKeeper.stop(this);
+        else NetaKeeper.start(this);
+        render(false);
+        GuardWidgetProvider.refresh(this);
+        if (refresher == null) refresher = new Refresher(this);
+        h.removeCallbacks(refresher);
+        h.postDelayed(refresher, 3000);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (refresher != null) h.removeCallbacks(refresher);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (pulse != null) pulse.cancel();
+        h.removeCallbacksAndMessages(null);
+        super.onDestroy();
+    }
+
+    private static class Refresher implements Runnable {
+        private final StatusActivity a;
+        Refresher(StatusActivity a) { this.a = a; }
+        @Override public void run() {
+            if (a == null || a.isFinishing() || a.isDestroyed()) return;
+            if (!a.busy) a.render(false);
+            a.h.postDelayed(this, 3000);
+        }
+    }
+
+    private static class TargetCard {
+        final ImageView icon;
+        final TextView name;
+        final TextView pkg;
+        final TextView pill;
+        final TextView action;
+        final TextView[] labels = new TextView[3];
+        final TextView[] values = new TextView[3];
+        final View[] dots = new View[3];
+
+        TargetCard(View root) {
+            icon = (ImageView) root.findViewById(R.id.targetIcon);
+            name = (TextView) root.findViewById(R.id.targetName);
+            pkg = (TextView) root.findViewById(R.id.targetPkg);
+            pill = (TextView) root.findViewById(R.id.targetPill);
+            action = (TextView) root.findViewById(R.id.targetAction);
+            labels[0] = (TextView) root.findViewById(R.id.row1Label);
+            values[0] = (TextView) root.findViewById(R.id.row1Value);
+            dots[0] = root.findViewById(R.id.row1Dot);
+            labels[1] = (TextView) root.findViewById(R.id.row2Label);
+            values[1] = (TextView) root.findViewById(R.id.row2Value);
+            dots[1] = root.findViewById(R.id.row2Dot);
+            labels[2] = (TextView) root.findViewById(R.id.row3Label);
+            values[2] = (TextView) root.findViewById(R.id.row3Value);
+            dots[2] = root.findViewById(R.id.row3Dot);
+        }
+
+        void setRow(int i, String label, String value, int color) {
+            labels[i].setText(label);
+            values[i].setText(value);
+            dots[i].setBackgroundTintList(ColorStateList.valueOf(color));
+        }
+    }
+
+    private static class CondRow {
+        final View root;
+        final ImageView icon;
+        final TextView title;
+        final TextView sub;
+        final TextView value;
+
+        CondRow(View root) {
+            this.root = root;
+            icon = (ImageView) root.findViewById(R.id.condIcon);
+            title = (TextView) root.findViewById(R.id.condTitle);
+            sub = (TextView) root.findViewById(R.id.condSub);
+            value = (TextView) root.findViewById(R.id.condValue);
+        }
     }
 }

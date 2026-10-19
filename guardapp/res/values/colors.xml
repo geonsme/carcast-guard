@@ -1,6 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 取自车机投屏宝图标的实测色值 -->
+    <color name="bg">#080A0A</color>
+    <color name="surface">#111514</color>
+    <color name="surface_2">#161C19</color>
+    <color name="stroke">#242C28</color>
+    <color name="stroke_soft">#1A211E</color>
+
+    <color name="text_primary">#F2F6F0</color>
+    <color name="text_secondary">#99A49E</color>
+    <color name="text_muted">#5F6A64</color>
+
+    <color name="accent">#C7F86F</color>
+    <color name="accent_soft">#9BD94E</color>
+    <color name="accent_deep">#5E8B2F</color>
+    <color name="ink">#0A0F06</color>
+    <color name="warn">#FFC46B</color>
+    <color name="err">#FF7A6B</color>
+
+    <color name="ok_tint">#1FC7F86F</color>
+    <color name="warn_tint">#1FFFC46B</color>
+    <color name="err_tint">#1FFF7A6B</color>
+    <color name="neutral_tint">#12FFFFFF</color>
+
     <color name="ic_launcher_background">#1E2022</color>
     <color name="guard_green_start">#84D87B</color>
     <color name="guard_green_mid">#BAF974</color>

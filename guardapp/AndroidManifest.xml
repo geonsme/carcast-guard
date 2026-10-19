@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="cn.luohui.mpguard"
-    android:versionCode="11"
-    android:versionName="1.11">
+    android:versionCode="14"
+    android:versionName="1.14">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Android 11+ 包可见性：不声明就查不到其它应用的名字，
          也读不到 getEnabledAccessibilityServiceList() 的结果 -->
@@ -18,6 +19,7 @@
             <action android:name="android.accessibilityservice.AccessibilityService" />
         </intent>
         <package android:name="com.sven.mycar" />
+        <package android:name="com.hezhong.nezha" />
     </queries>
 
     <application
@@ -25,7 +27,9 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
-        android:hasCode="true">
+        android:hasCode="true"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
 
         <service
             android:name=".GuardService"
@@ -53,6 +57,22 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.USER_PRESENT" />
             </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".RearmAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".GuardWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/guard_widget_info" />
         </receiver>
 
         <activity

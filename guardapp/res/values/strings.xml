@@ -1,5 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">投屏授权守护</string>
-    <string name="guard_desc">检测到系统的投屏/录屏授权对话框时，自动点击允许，避免手机卡在授权环节。</string>
+    <string name="app_name">车控守护</string>
+    <string name="brand_sub">CARCAST · KEY GUARD</string>
+    <string name="guard_desc">自动放行投屏/录屏授权，并守护车机投屏宝与哪吒汽车的后台通道。哪吒通道通过系统级服务绑定与心跳广播保活，不采集、不上传任何数据。</string>
+
+    <string name="header_status">守护中</string>
+    <string name="hero_index">守护指数</string>
+    <string name="hero_code">SYS / 01</string>
+    <string name="hero_headline">正在读取守护状态</string>
+    <string name="hero_sub">投屏宝 · 哪吒汽车 · 本机离线守护</string>
+    <string name="pill_access">无障碍 · --</string>
+    <string name="pill_bind">绑定 · --</string>
+    <string name="pill_heal">自愈 · --</string>
+
+    <string name="section_targets">守护目标</string>
+    <string name="section_targets_code">02 TARGETS</string>
+    <string name="section_conditions">系统条件</string>
+    <string name="section_conditions_code">SYS CHECKS</string>
+    <string name="section_log">最近动作</string>
+    <string name="section_log_code">EVENT LOG</string>
+
+    <string name="target_sven">车机投屏宝</string>
+    <string name="target_neta">哪吒汽车</string>
+    <string name="target_action_rebind">重新绑定通道</string>
+
+    <string name="btn_heal">立即自愈</string>
+    <string name="btn_restore">恢复守护</string>
+    <string name="btn_check">检测</string>
+    <string name="btn_disable">停用守护</string>
+    <string name="btn_enable">启用守护</string>
+    <string name="btn_settings">无障碍设置</string>
+
+    <string name="privacy_note">本地运行 · 不采集数据</string>
+    <string name="widget_desc">1×1 状态磁贴：一眼查看双通道守护状态，点击进入控制台</string>
+    <string name="log_waiting">等待首次操作</string>
+    <string name="log_auto">自动体检 · 每 15 分钟</string>
+
+    <string name="dialog_cancel">取消</string>
+    <string name="dialog_stop_title">停用守护？</string>
+    <string name="dialog_stop_msg">停用后将摘除本应用的无障碍条目、取消定时自愈，并断开与哪吒汽车的 MQTT 绑定。\n\n车机投屏宝本身不受影响，随时可以重新启用。</string>
+    <string name="dialog_stop_confirm">停用</string>
+    <string name="dialog_perm_title">缺少自愈权限</string>
+    <string name="dialog_perm_msg">需要一次 adb 授权，守护应用才能写回被系统清掉的无障碍开关。请连接电脑执行下方命令：</string>
+    <string name="dialog_perm_copy">复制命令</string>
+    <string name="perm_command">adb shell pm grant %1$s android.permission.WRITE_SECURE_SETTINGS</string>
 </resources>
