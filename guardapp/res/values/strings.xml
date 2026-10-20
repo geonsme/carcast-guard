@@ -8,6 +8,9 @@
     <string name="theme_night_on">已切换到夜间模式</string>
     <string name="guard_desc">自动放行投屏/录屏授权，并守护车机投屏宝与哪吒汽车的后台通道。哪吒通道通过系统级服务绑定与心跳广播保活，不采集、不上传任何数据。</string>
 
+    <string name="tab_overview">概览</string>
+    <string name="tab_system">系统</string>
+
     <string name="header_status">守护中</string>
     <string name="hero_index">守护指数</string>
     <string name="hero_code">SYS / 01</string>
@@ -25,9 +28,24 @@
     <string name="section_log_code">EVENT LOG</string>
     <string name="section_update">应用更新</string>
     <string name="section_update_code">APP UPDATE</string>
+    <string name="section_control">守护控制</string>
+
+    <string name="target_sven_sub">投屏授权 · 弹窗自动放行</string>
+    <string name="target_neta_sub">数字钥匙 · 后台通道保活</string>
+
+    <string name="cond_access_title">无障碍服务</string>
+    <string name="cond_access_sub">自动放行投屏与录屏授权</string>
+    <string name="cond_perm_title">自愈权限</string>
+    <string name="cond_perm_sub">ADB 一次性授权 · 掉线自动补写</string>
+    <string name="cond_keep_title">持久体检</string>
+    <string name="cond_keep_sub">双路闹钟 10 分钟 · 任务 15 分钟</string>
+    <string name="cond_battery_title">电池优化豁免</string>
+    <string name="cond_battery_sub">避免后台进程被系统冻结</string>
+    <string name="control_title">守护总开关</string>
+    <string name="control_sub">停用后将暂停自愈与哪吒通道绑定</string>
 
     <string name="update_current">当前版本 v%1$s</string>
-    <string name="update_hint">GitHub Release · 自动选择更新线路</string>
+    <string name="update_hint">GitHub Release · 自动线路</string>
     <string name="btn_update">检查更新</string>
     <string name="btn_update_now">立即更新</string>
     <string name="btn_checking">检查中…</string>

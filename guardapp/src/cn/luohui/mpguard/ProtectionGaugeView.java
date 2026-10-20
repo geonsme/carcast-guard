@@ -14,24 +14,20 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
-/** 守护指数仪表盘：270° 刻度环 + 实时分数 + 进度游标。 */
+/** 守护指数圆环：360° 细环 + 圆头进度 + 分数，克制、无刻度。 */
 public class ProtectionGaugeView extends View {
 
-    private static final float START_ANGLE = 135f;
-    private static final float SWEEP_ANGLE = 270f;
-    private static final int TICKS = 28;
+    private static final float START_ANGLE = -90f;
+    private static final float SWEEP_ANGLE = 360f;
 
     private final Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint arcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF arcRect = new RectF();
-
-    private final Typeface scoreType;
-    private final Typeface labelType;
+    private final Paint corePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private float density;
     private float cx;
@@ -40,7 +36,6 @@ public class ProtectionGaugeView extends View {
     private float shown;
     private int target;
     private int accent;
-    private final int tickDim;
     private Shader arcShader;
     private Shader coreGlow;
     private ValueAnimator animator;
@@ -53,48 +48,33 @@ public class ProtectionGaugeView extends View {
         super(context, attrs);
         density = getResources().getDisplayMetrics().density;
         accent = context.getColor(R.color.accent);
-        tickDim = context.getColor(R.color.gauge_tick);
-        scoreType = loadFont(R.font.rajdhani_semibold, Typeface.create("sans-serif", Typeface.NORMAL));
-        labelType = loadFont(R.font.rajdhani_medium, Typeface.create("sans-serif", Typeface.NORMAL));
 
         trackPaint.setStyle(Paint.Style.STROKE);
-        trackPaint.setStrokeWidth(dp(8.5f));
+        trackPaint.setStrokeWidth(dp(8f));
         trackPaint.setStrokeCap(Paint.Cap.ROUND);
         trackPaint.setColor(context.getColor(R.color.gauge_track));
 
         arcPaint.setStyle(Paint.Style.STROKE);
-        arcPaint.setStrokeWidth(dp(8.5f));
+        arcPaint.setStrokeWidth(dp(8f));
         arcPaint.setStrokeCap(Paint.Cap.ROUND);
         arcPaint.setColor(accent);
 
         glowPaint.setStyle(Paint.Style.STROKE);
-        glowPaint.setStrokeWidth(dp(19f));
+        glowPaint.setStrokeWidth(dp(18f));
         glowPaint.setStrokeCap(Paint.Cap.ROUND);
-        glowPaint.setColor(withAlpha(accent, 30));
-
-        tickPaint.setStyle(Paint.Style.STROKE);
-        tickPaint.setStrokeWidth(dp(1.1f));
-        tickPaint.setStrokeCap(Paint.Cap.ROUND);
+        glowPaint.setColor(withAlpha(accent, 26));
 
         scorePaint.setTextAlign(Paint.Align.CENTER);
-        scorePaint.setTypeface(scoreType);
+        scorePaint.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
         scorePaint.setColor(context.getColor(R.color.text_primary));
 
         labelPaint.setTextAlign(Paint.Align.CENTER);
-        labelPaint.setTypeface(labelType);
-        labelPaint.setLetterSpacing(0.16f);
-        labelPaint.setColor(withAlpha(accent, 170));
+        labelPaint.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        labelPaint.setLetterSpacing(0.12f);
+        labelPaint.setColor(withAlpha(accent, 150));
 
         dotPaint.setStyle(Paint.Style.FILL);
         dotPaint.setColor(accent);
-    }
-
-    private Typeface loadFont(int id, Typeface fallback) {
-        try {
-            return getResources().getFont(id);
-        } catch (Exception e) {
-            return fallback;
-        }
     }
 
     private float dp(float v) { return v * density; }
@@ -114,7 +94,7 @@ public class ProtectionGaugeView extends View {
     public void setScore(int score, int color, boolean animate) {
         score = Math.max(0, Math.min(100, score));
         accent = color;
-        labelPaint.setColor(withAlpha(accent, 170));
+        labelPaint.setColor(withAlpha(accent, 150));
         dotPaint.setColor(accent);
         buildShaders();
         if (target == score) {
@@ -129,7 +109,7 @@ public class ProtectionGaugeView extends View {
             return;
         }
         animator = ValueAnimator.ofFloat(shown, score);
-        animator.setDuration(680);
+        animator.setDuration(720);
         animator.setInterpolator(new DecelerateInterpolator(1.7f));
         animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override public void onAnimationUpdate(ValueAnimator a) {
@@ -145,10 +125,10 @@ public class ProtectionGaugeView extends View {
         super.onSizeChanged(w, h, oldw, oldh);
         cx = w / 2f;
         cy = h / 2f;
-        radius = Math.min(w, h) / 2f - dp(26f);
+        radius = Math.min(w, h) / 2f - dp(14f);
         arcRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
-        scorePaint.setTextSize(dp(58f));
-        labelPaint.setTextSize(dp(8.5f));
+        scorePaint.setTextSize(dp(44f));
+        labelPaint.setTextSize(dp(9.5f));
         buildShaders();
     }
 
@@ -156,12 +136,12 @@ public class ProtectionGaugeView extends View {
         if (radius <= 0) return;
         arcShader = new LinearGradient(
                 cx - radius, cy - radius, cx + radius, cy + radius,
-                blend(accent, Color.WHITE, 0.28f), accent, Shader.TileMode.CLAMP);
+                blend(accent, Color.WHITE, 0.2f), accent, Shader.TileMode.CLAMP);
         coreGlow = new RadialGradient(
-                cx, cy, radius * 0.72f,
-                new int[]{withAlpha(accent, 24), withAlpha(accent, 0)},
+                cx, cy, radius * 0.86f,
+                new int[]{withAlpha(accent, 16), withAlpha(accent, 0)},
                 new float[]{0f, 1f}, Shader.TileMode.CLAMP);
-        glowPaint.setColor(withAlpha(accent, 30));
+        glowPaint.setColor(withAlpha(accent, 26));
     }
 
     @Override
@@ -169,47 +149,32 @@ public class ProtectionGaugeView extends View {
         super.onDraw(canvas);
         if (radius <= 0) return;
 
-        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        p.setShader(coreGlow);
-        canvas.drawCircle(cx, cy, radius * 0.72f, p);
-
+        corePaint.setShader(coreGlow);
+        canvas.drawCircle(cx, cy, radius * 0.86f, corePaint);
         canvas.drawArc(arcRect, START_ANGLE, SWEEP_ANGLE, false, trackPaint);
 
         float sweep = SWEEP_ANGLE * shown / 100f;
-        canvas.drawArc(arcRect, START_ANGLE, sweep, false, glowPaint);
-        arcPaint.setShader(arcShader);
-        canvas.drawArc(arcRect, START_ANGLE, sweep, false, arcPaint);
-
-        for (int i = 0; i <= TICKS; i++) {
-            double angle = Math.toRadians(START_ANGLE + SWEEP_ANGLE * i / TICKS);
-            float cos = (float) Math.cos(angle);
-            float sin = (float) Math.sin(angle);
-            float inner = radius + dp(12f);
-            float outer = radius + dp(17f);
-            boolean lit = (i * 100f / TICKS) <= shown;
-            tickPaint.setColor(lit ? withAlpha(accent, 155) : tickDim);
-            canvas.drawLine(cx + cos * inner, cy + sin * inner,
-                    cx + cos * outer, cy + sin * outer, tickPaint);
+        if (sweep > 0.2f) {
+            canvas.drawArc(arcRect, START_ANGLE, sweep, false, glowPaint);
+            arcPaint.setShader(arcShader);
+            canvas.drawArc(arcRect, START_ANGLE, sweep, false, arcPaint);
         }
 
         if (shown > 0.5f) {
             double angle = Math.toRadians(START_ANGLE + sweep);
             float px = cx + (float) Math.cos(angle) * radius;
             float py = cy + (float) Math.sin(angle) * radius;
-            dotPaint.setColor(withAlpha(accent, 45));
+            dotPaint.setColor(withAlpha(accent, 48));
             canvas.drawCircle(px, py, dp(8f), dotPaint);
             dotPaint.setColor(accent);
-            canvas.drawCircle(px, py, dp(3.2f), dotPaint);
+            canvas.drawCircle(px, py, dp(3.4f), dotPaint);
         }
 
         Paint.FontMetrics fm = scorePaint.getFontMetrics();
-        float scoreBaseline = cy - (fm.ascent + fm.descent) / 2f + dp(1f);
-        canvas.drawText(String.valueOf(Math.round(shown)), cx, scoreBaseline, scorePaint);
-
-        labelPaint.setColor(withAlpha(accent, 120));
-        canvas.drawText("GUARD INDEX", cx, cy - dp(38f), labelPaint);
-        labelPaint.setColor(withAlpha(accent, 185));
-        canvas.drawText("SCORE / 100", cx, cy + dp(36f), labelPaint);
+        float scoreCenterY = cy - dp(4f);
+        float baseline = scoreCenterY - (fm.ascent + fm.descent) / 2f;
+        canvas.drawText(String.valueOf(Math.round(shown)), cx, baseline, scorePaint);
+        canvas.drawText("/ 100", cx, cy + dp(28f), labelPaint);
     }
 
     @Override

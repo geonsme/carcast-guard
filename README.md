@@ -65,12 +65,13 @@
 │   │   ├── UpdateChecker.java     # Release 检查/下载/签名校验/安装
 │   │   ├── VersionUtil.java       # 语义版本归一化与比较
 │   │   ├── InstallResultReceiver.java # PackageInstaller 结果回执
-│   │   ├── ProtectionGaugeView.java # 270° 自定义守护指数仪表
-│   │   ├── BackdropView.java      # 主题化底色 + 光晕 + 网格背景
-│   │   └── StatusActivity.java    # 状态页：守护指数/目标卡/系统条件/动作
+│   │   ├── ProtectionGaugeView.java # 360° 自定义守护指数圆环
+│   │   ├── GlassCardView.java     # 真磨砂玻璃卡片：采样背景模糊图 + 色调/高光/描边
+│   │   ├── BackdropView.java      # 主题化底色 + 三处光晕 + 噪点颗粒
+│   │   └── StatusActivity.java    # 双页签状态页：概览 / 系统 + 悬浮 dock
 │   ├── build.sh                   # 跨平台构建：本地 Windows / Actions Linux
 │   ├── render_preview.js          # 图标矢量栅格化预览
-│   └── mp-guard.apk               # 已签名成品（v1.19，约 0.52 MB，含字体）
+│   └── mp-guard.apk               # 已签名成品（v1.20，约 0.53 MB，含字体）
 ├── mp_guard.sh                    # shell 级兜底守护（设备端，需 adb）
 ├── rearm.sh                       # 电脑端一条命令恢复（含哪吒钉权）
 ├── verify_after_reboot.sh         # 重启后逐项核对（双通道 38 项）
@@ -83,7 +84,8 @@
 
 ## 3. 车控守护 App
 
-包名 `cn.luohui.mpguard`，自签，约 0.52 MB。v1.19 把桌面磁贴底色改成 98% 透明度的白色；
+包名 `cn.luohui.mpguard`，自签，约 0.53 MB。v1.20 把状态页重构为苹果式磨砂玻璃双页签，桌面磁贴改为 90% 透明度；
+v1.19 把桌面磁贴底色改成 98% 透明度的白色；
 v1.18 把桌面磁贴改为 2×2，并在右上角显示最近更新时间；
 v1.17 移除更新检查对 GitHub API 配额的依赖，并加入更新镜像与结果缓存；
 v1.16 加入应用内明暗主题切换，并修正底部动作按钮的图标与文字间距；
@@ -153,24 +155,30 @@ GuardService（系统绑定，常驻）
 - 哪吒的蓝牙权限（`BLUETOOTH_SCAN/CONNECT/ADVERTISE`）、后台定位、appops、Doze 白名单与待机桶由 `rearm.sh` / `mp_guard.sh` 复核钉住。
 - 用户点「停用守护」时 `NetaKeeper.stop()` 会解绑并停止心跳，不会自行恢复。
 
-### 3.4 状态页（v1.12）
+### 3.4 状态页（v1.20 磨砂玻璃双页签）
 
-一屏式汽车仪表盘：270° 守护指数、双目标卡、系统条件、最近动作，底部常驻四个动作（立即自愈、检测、重绑哪吒、停用/启用守护），右上角为明暗主题切换。
+固定大标题 + 分段控件（概览 / 系统），两页各自是独立 `ScrollView`，切换时保留滚动位置；
+底部是悬浮磨砂玻璃 dock（立即自愈 / 检测 / 打开系统设置），“停用守护”收进系统页，避免一页滑到底。
 
-- **守护指数**：无障碍总开关、自愈权限、定时任务、投屏宝已加载、哪吒已绑定等 7 项加权，0–100 动态动画
-- **目标卡**：投屏宝（无障碍通道 / 投屏弹窗策略 / 本次放行次数）与哪吒汽车（MQTT 绑定 / 心跳唤醒 / 双路闹钟）
-- **系统条件**：无障碍总开关、`WRITE_SECURE_SETTINGS`、JobScheduler、三应用 Doze 白名单汇总
-- **交互**：每 3 秒自动刷新；「立即自愈」「检测」「重绑哪吒」「停用/启用守护」均有 Toast + 事件日志 + 整页重算
+- **概览**：守护指数圆环 + 一句结论 + 三枚状态胶囊（无障碍 / 绑定 / 自愈）、两张目标卡、最近动作
+- **目标卡**：投屏宝（无障碍通道 / 投屏弹窗策略 / 本次放行次数）与哪吒汽车（MQTT 绑定 / 心跳唤醒 / 双路闹钟）；
+  哪吒卡在未绑定时提供「重新绑定通道」
+- **系统**：无障碍、`WRITE_SECURE_SETTINGS`、JobScheduler、Doze 白名单等条件；应用更新卡片；守护总开关与隐私说明
+- **真磨砂玻璃**：`BackdropView` 铺色块、三处光晕和噪点，`GlassCardView` 首次布局时把背景缩到 0.25 倍并做三次盒式模糊，
+  每张卡片按窗口坐标采样模糊图，再叠加主题色膜、顶部高光与渐变描边；滚动时磨砂随位置变化，不依赖 RenderScript / AndroidX
+- **边缘到边缘**：状态栏、导航栏透明，按 `WindowInsets` 给标题、滚动区和 dock 让位；深色/浅色主题各自调整系统栏图标明暗
+- **交互**：每 3 秒自动刷新；自愈、检测、重新绑定、启停都会 Toast + 写入最近动作 + 重算整页指数
 - **权限引导**：缺 `WRITE_SECURE_SETTINGS` 时弹出可复制的 ADB 命令，不把用户丢进设置页
 
-### 3.5 桌面 2×2 状态磁贴（v1.18 起，v1.19 近乎全透明）
+### 3.5 桌面 2×2 状态磁贴（v1.18 起，v1.20 改为 90% 透明）
 
 `GuardWidgetProvider` 提供一个标准 App Widget，固定占桌面 **2×2** 格：中央是放大的盾牌图标 + 一行状态，
 右上角用 10sp 灰色小字显示最近一轮刷新时间（`HH:mm`，24 小时制，不显示日期和秒）；点击任意位置进入控制台。
-背景为 **98% 透明度的白色**（`#05FFFFFF`，即 2% 白色蒙层），保留 18dp 圆角，不再画边框；视觉上基本只看到图标、状态和时间浮在壁纸上。
+背景为 **90% 透明度的白色**（`#1AFFFFFF`，即 10% 白色蒙层），保留 18dp 圆角、无边框；
+比 v1.19 的 2% 蒙层更实一些，在浅色和深色壁纸上都能保持图标、状态和时间可读。
 
 - 状态优先级：已停用（灰）→ 待授权（珊瑚）→ 待激活（珊瑚）→ 仅投屏（琥珀）→ 重连中（琥珀）→ 守护中（柠檬绿）。
-  前景沿用固定高亮色（`#C7F86F` / `#FFC46B` / `#FF7A6B` / `#99A49E`），不随主题变化；因底色几乎全透明，实际可读性会受壁纸明暗影响。
+  前景沿用固定高亮色（`#C7F86F` / `#FFC46B` / `#FF7A6B` / `#99A49E`），不随主题变化；底色仍较透，实际可读性会受壁纸明暗影响。
 - 刷新：系统 `updatePeriodMillis` 每 30 分钟一次；App 内每次状态重绘、自愈、启停、重绑，以及哪吒绑定连上/断开时都会主动 `refresh()`。
   右上角时间是**最近一次刷新（状态重算）的时刻**，不是实时跳动的时钟；系统节流或 Doze 下时间会停在上一轮，正好可用来判断磁贴是否新鲜。
 - 添加方式：长按桌面空白处 → 「卡片」→ 在「全部卡片」里找到「车控守护」添加（卡片中心搜索按中文匹配，拼音搜不到）。
@@ -196,7 +204,7 @@ GuardService（系统绑定，常驻）
 
 ### 3.7 明暗主题（v1.16）
 
-状态页右上角新增 36dp 的主题按钮，在白天/夜间模式之间切换，默认夜间，不占用版面。
+状态页右上角新增 38dp 的主题按钮，在白天/夜间模式之间切换，默认夜间，不占用版面。
 
 - 偏好保存在 `guard_ui` SharedPreferences（键 `night_mode`，默认 `true`），与系统主题相互独立：
   系统白天时 App 仍默认暗色，系统夜间时也可强制切到亮色。
@@ -204,16 +212,16 @@ GuardService（系统绑定，常驻）
   `createConfigurationContext` 覆盖 `Configuration.uiMode` 的 `NIGHT_*` 位，再配合 `values-night/colors.xml`
   让全部颜色资源按主题解析；切换后 `recreate()` 并淡入淡出。
 - 状态栏/导航栏颜色与图标明暗随主题同步；`BackdropView`、`ProtectionGaugeView` 改为从颜色资源取色。
-- 桌面 2×2 磁贴固定使用 `widget_*` 常量色（98% 透明白底 + 高亮前景），不随应用主题变化。
+- 桌面 2×2 磁贴固定使用 `widget_*` 常量色（90% 透明白底 + 高亮前景），不随应用主题变化。
 - 更新下载/安装进行中禁止切换主题，避免重建 Activity 丢失安装回执。
 - 底部「立即自愈」按钮由 `TextView` 复合 drawable 改为 `LinearLayout` 包 `ImageView + TextView`，
   图标与文字间距 5dp 并整体居中；此前 `drawableStart` 会把图标钉在按钮左缘、文字单独居中。
 
 ### 3.8 图标与视觉
 
-夜间为深炭黑 `#080A0A` + 柠檬绿 `#C7F86F` 主色，琥珀 `#FFC46B` 与珊瑚 `#FF7A6B` 分级告警；
-白天换为暖白底 `#F3F5EF`、白卡片与深绿 `#4F7A1F` 主色，同一套语义色位；
-数字与拉丁小标使用 Rajdhani（OFL），背景为网格 + 双光晕，母题为盾牌 + 对勾。
+夜间为深墨绿 `#070A08` + 柠檬绿 `#C7F86F` 主色，琥珀 `#FFC46B` 与珊瑚 `#FF7A6B` 分级告警；
+白天换为鼠尾草暖白 `#F1F4EC`、深绿 `#3F7A2A` 主色与砖红告警，同一套语义色位；
+数字与拉丁小标使用 Rajdhani（OFL），背景为底色 + 三处光晕 + 细噪点，内容卡片统一为磨砂玻璃，母题为盾牌 + 对勾。
 
 ### 3.9 REA 对哪吒 APK 的静态核对
 
@@ -344,8 +352,8 @@ adb shell am set-standby-bucket com.hezhong.nezha 5
 （`platforms;android-33` + `build-tools;33.0.1`），直接调用同一个 `guardapp/build.sh`。
 
 - **每次 push**（任意分支）：构建 APK，上传为 Actions artifact，命名 `mp-guard-<短 SHA>.apk`。
-- **打 tag**（`v1.19`、`v1.19.1`）：额外创建 GitHub Release，附件为 `mp-guard-<tag>.apk`，
-  并用 tag 自动改写 `versionName` 与 `versionCode`（`1.19` → `11900`），无需手工改 Manifest。
+- **打 tag**（`v1.20`、`v1.20.1`）：额外创建 GitHub Release，附件为 `mp-guard-<tag>.apk`，
+  并用 tag 自动改写 `versionName` 与 `versionCode`（`1.20` → `12000`），无需手工改 Manifest。
 - 仓库必须为 **public**：App 内更新以匿名身份读取 `releases/latest` 和下载附件；私有仓库会 404。
   Release 不能是 draft / prerelease，否则不会被 `latest` 返回。
 - 更新包由 App 校验签名；CI 必须继续使用同一把 keystore，否则会被拒绝安装。
@@ -353,7 +361,7 @@ adb shell am set-standby-bucket com.hezhong.nezha 5
   - `MPGUARD_KS_BASE64`：`guardapp/mpguard.ks` 的 Base64
   - `MPGUARD_KS_PASS` / `MPGUARD_KEY_PASS`：keystore 与 key 密码
   - `MPGUARD_KEY_ALIAS` 可选，默认 `mpguard`
-- 触发发布：`git tag v1.19 && git push origin v1.19`。
+- 触发发布：`git tag v1.20 && git push origin v1.20`。
 
 ## 7. 已知限制
 

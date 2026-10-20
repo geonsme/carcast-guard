@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 夜间模式（默认） -->
-    <color name="bg">#080A0A</color>
-    <color name="surface">#111514</color>
-    <color name="surface_2">#161C19</color>
-    <color name="stroke">#242C28</color>
-    <color name="stroke_soft">#1A211E</color>
+    <color name="bg">#070A08</color>
+    <color name="surface">#111613</color>
+    <color name="surface_2">#161D19</color>
+    <color name="stroke">#26302A</color>
+    <color name="stroke_soft">#1B231E</color>
+    <color name="dock_scrim">#E6070A08</color>
 
-    <color name="text_primary">#F2F6F0</color>
-    <color name="text_secondary">#99A49E</color>
-    <color name="text_muted">#5F6A64</color>
+    <color name="text_primary">#F3F6F0</color>
+    <color name="text_secondary">#A2AEA5</color>
+    <color name="text_muted">#6A766E</color>
 
     <color name="accent">#C7F86F</color>
     <color name="accent_soft">#9BD94E</color>
@@ -23,26 +24,36 @@
     <color name="err_tint">#1FFF7A6B</color>
     <color name="neutral_tint">#12FFFFFF</color>
 
-    <color name="bottom_bar_start">#00080A0A</color>
-    <color name="bottom_bar_center">#E6080A0A</color>
-    <color name="bottom_bar_end">#FF080A0A</color>
+    <!-- 磨砂玻璃 -->
+    <color name="glass_tint">#59101411</color>
+    <color name="glass_sheen">#14FFFFFF</color>
+    <color name="glass_stroke_top">#3DFFFFFF</color>
+    <color name="glass_stroke_bottom">#0FFFFFFF</color>
+    <color name="segment_track">#4D0B0F0C</color>
+    <color name="segment_track_stroke">#26FFFFFF</color>
+    <color name="segment_indicator">#3DFFFFFF</color>
+    <color name="segment_indicator_stroke">#40FFFFFF</color>
+
+    <color name="bottom_bar_start">#00070A08</color>
+    <color name="bottom_bar_center">#E6070A08</color>
+    <color name="bottom_bar_end">#FF070A08</color>
     <color name="hero_start">#1A241D</color>
     <color name="hero_center">#131917</color>
     <color name="hero_end">#0D1110</color>
     <color name="hero_stroke">#2C3A31</color>
-    <color name="ghost_ripple">#1AFFFFFF</color>
-    <color name="ghost_solid">#121715</color>
-    <color name="ghost_stroke">#2A332E</color>
+    <color name="ghost_ripple">#1FFFFFFF</color>
+    <color name="ghost_solid">#26FFFFFF</color>
+    <color name="ghost_stroke">#33FFFFFF</color>
     <color name="primary_ripple">#330A0F06</color>
-    <color name="dialog_solid">#151B18</color>
+    <color name="dialog_solid">#171D19</color>
     <color name="dialog_stroke">#2C3731</color>
-    <color name="icon_soft_solid">#171D1A</color>
-    <color name="icon_soft_stroke">#232C27</color>
-    <color name="icon_tile_start">#1F2B22</color>
-    <color name="icon_tile_end">#121713</color>
+    <color name="icon_soft_solid">#1B231E</color>
+    <color name="icon_soft_stroke">#26312A</color>
+    <color name="icon_tile_start">#202B23</color>
+    <color name="icon_tile_end">#131914</color>
     <color name="icon_tile_stroke">#334332</color>
-    <color name="log_solid">#0D1110</color>
-    <color name="log_stroke">#1C2420</color>
+    <color name="log_solid">#101512</color>
+    <color name="log_stroke">#1E2722</color>
 
     <color name="pill_neutral_stroke">#1AFFFFFF</color>
     <color name="ok_stroke">#2EC7F86F</color>
@@ -52,11 +63,13 @@
     <color name="danger_solid">#26FF7A6B</color>
     <color name="danger_stroke">#4DFF7A6B</color>
 
-    <color name="gauge_track">#1C2521</color>
-    <color name="gauge_tick">#2C3631</color>
-    <color name="backdrop_grid">#0BFFFFFF</color>
-    <color name="backdrop_lime_inner">#2E3E5C2F</color>
-    <color name="backdrop_lime_outer">#001B2A1C</color>
-    <color name="backdrop_warm_inner">#10FFC46B</color>
-    <color name="backdrop_warm_outer">#00FFC46B</color>
+    <color name="gauge_track">#1E2822</color>
+    <color name="gauge_tick">#2A342E</color>
+    <color name="backdrop_base">#070A08</color>
+    <color name="backdrop_glow_a_inner">#4A3E7A2A</color>
+    <color name="backdrop_glow_a_outer">#003E7A2A</color>
+    <color name="backdrop_glow_b_inner">#1FC98A45</color>
+    <color name="backdrop_glow_b_outer">#00C98A45</color>
+    <color name="backdrop_glow_c_inner">#242F6A5E</color>
+    <color name="backdrop_glow_c_outer">#002F6A5E</color>
 </resources>

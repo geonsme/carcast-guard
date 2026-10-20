@@ -1,30 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/bg"
-    android:fitsSystemWindows="true">
+    android:layout_height="match_parent">
 
     <cn.luohui.mpguard.BackdropView
+        android:id="@+id/backdrop"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:fillViewport="true"
-        android:overScrollMode="never"
-        android:scrollbars="none">
+        android:orientation="vertical">
 
         <LinearLayout
+            android:id="@+id/headerWrap"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingStart="20dp"
-            android:paddingTop="18dp"
-            android:paddingEnd="20dp"
-            android:paddingBottom="128dp">
+            android:paddingTop="10dp"
+            android:paddingEnd="20dp">
 
             <LinearLayout
                 android:id="@+id/header"
@@ -34,13 +32,13 @@
                 android:orientation="horizontal">
 
                 <FrameLayout
-                    android:layout_width="46dp"
-                    android:layout_height="46dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:background="@drawable/bg_brand">
 
                     <ImageView
-                        android:layout_width="25dp"
-                        android:layout_height="25dp"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
                         android:layout_gravity="center"
                         android:contentDescription="@string/app_name"
                         android:src="@drawable/ic_shield"
@@ -58,30 +56,32 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-medium"
-                        android:letterSpacing="0.02"
+                        android:includeFontPadding="false"
+                        android:letterSpacing="0.01"
                         android:text="@string/app_name"
                         android:textColor="@color/text_primary"
-                        android:textSize="20sp" />
+                        android:textSize="21sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="3dp"
-                        android:fontFamily="@font/rajdhani_medium"
-                        android:letterSpacing="0.18"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:includeFontPadding="false"
+                        android:letterSpacing="0.16"
                         android:text="@string/brand_sub"
                         android:textColor="@color/text_muted"
-                        android:textSize="9sp" />
+                        android:textSize="8.5sp" />
                 </LinearLayout>
 
                 <ImageButton
                     android:id="@+id/btnTheme"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
                     android:layout_marginEnd="8dp"
                     android:background="@drawable/bg_btn_ghost"
                     android:contentDescription="@string/theme_to_light"
-                    android:padding="9dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_sun"
                     android:tint="@color/text_secondary" />
 
@@ -110,390 +110,479 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
                         android:fontFamily="sans-serif-medium"
-                        android:letterSpacing="0.04"
+                        android:letterSpacing="0.02"
                         android:maxLines="1"
                         android:text="@string/header_status"
                         android:textColor="@color/accent"
-                        android:textSize="10sp" />
+                        android:textSize="10.5sp" />
                 </LinearLayout>
             </LinearLayout>
 
-            <FrameLayout
-                android:id="@+id/heroCard"
+            <cn.luohui.mpguard.GlassCardView
+                android:id="@+id/segmented"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
-                android:background="@drawable/bg_card_hero"
-                android:padding="18dp">
+                android:layout_height="40dp"
+                android:layout_marginTop="14dp"
+                android:padding="3dp"
+                app:glassCornerRadius="20dp">
+
+                <View
+                    android:id="@+id/segIndicator"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_segment_indicator"
+                    android:elevation="1dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:elevation="3dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tabOverview"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:fontFamily="sans-serif-medium"
+                        android:gravity="center"
+                        android:text="@string/tab_overview"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/tabSystem"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:fontFamily="sans-serif-medium"
+                        android:gravity="center"
+                        android:text="@string/tab_system"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </cn.luohui.mpguard.GlassCardView>
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/tabContent"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="4dp"
+            android:layout_weight="1">
+
+            <ScrollView
+                android:id="@+id/overviewScroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:fillViewport="true"
+                android:overScrollMode="never"
+                android:paddingBottom="112dp"
+                android:scrollbars="none">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:paddingStart="20dp"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="20dp"
+                    android:paddingBottom="16dp">
 
-                    <LinearLayout
+                    <cn.luohui.mpguard.GlassCardView
+                        android:id="@+id/heroCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:padding="16dp"
+                        app:glassCornerRadius="26dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-medium"
-                            android:letterSpacing="0.08"
-                            android:text="@string/hero_index"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11sp" />
+                            android:orientation="vertical">
 
-                        <Space
-                            android:layout_width="0dp"
-                            android:layout_height="1dp"
-                            android:layout_weight="1" />
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
 
-                        <TextView
-                            style="@style/SectionCode"
-                            android:text="@string/hero_code"
-                            android:textColor="@color/accent" />
-                    </LinearLayout>
+                                <cn.luohui.mpguard.ProtectionGaugeView
+                                    android:id="@+id/gauge"
+                                    android:layout_width="118dp"
+                                    android:layout_height="118dp" />
 
-                    <cn.luohui.mpguard.ProtectionGaugeView
-                        android:id="@+id/gauge"
-                        android:layout_width="216dp"
-                        android:layout_height="216dp"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginTop="2dp" />
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="sans-serif-medium"
+                                        android:letterSpacing="0.04"
+                                        android:text="@string/hero_index"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="11sp" />
+
+                                    <TextView
+                                        android:id="@+id/heroHeadline"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="7dp"
+                                        android:fontFamily="sans-serif-medium"
+                                        android:lineSpacingExtra="1dp"
+                                        android:text="@string/hero_headline"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="18sp" />
+
+                                    <TextView
+                                        android:id="@+id/heroSub"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="5dp"
+                                        android:lineSpacingExtra="2dp"
+                                        android:text="@string/hero_sub"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="11.5sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="15dp"
+                                android:gravity="center"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/pillAccess"
+                                    style="@style/Pill"
+                                    android:layout_width="0dp"
+                                    android:layout_height="28dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_pill_neutral"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/pill_access"
+                                    android:textSize="10.5sp" />
+
+                                <TextView
+                                    android:id="@+id/pillBind"
+                                    style="@style/Pill"
+                                    android:layout_width="0dp"
+                                    android:layout_height="28dp"
+                                    android:layout_marginStart="7dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_pill_neutral"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/pill_bind"
+                                    android:textSize="10.5sp" />
+
+                                <TextView
+                                    android:id="@+id/pillHeal"
+                                    style="@style/Pill"
+                                    android:layout_width="0dp"
+                                    android:layout_height="28dp"
+                                    android:layout_marginStart="7dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_pill_neutral"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/pill_heal"
+                                    android:textSize="10.5sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </cn.luohui.mpguard.GlassCardView>
 
                     <TextView
-                        android:id="@+id/heroHeadline"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:gravity="center"
-                        android:letterSpacing="0.02"
-                        android:text="@string/hero_headline"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:id="@+id/heroSub"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:gravity="center"
-                        android:text="@string/hero_sub"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginTop="16dp"
-                        android:background="@color/stroke_soft" />
+                        android:id="@+id/sectionTargets"
+                        style="@style/SectionLabel"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="24dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/section_targets" />
 
                     <LinearLayout
+                        android:id="@+id/targetsContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:gravity="center"
-                        android:orientation="horizontal">
+                        android:orientation="vertical" />
 
-                        <TextView
-                            android:id="@+id/pillAccess"
-                            style="@style/Pill"
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:background="@drawable/bg_pill_neutral"
-                            android:ellipsize="end"
-                            android:maxLines="1"
-                            android:text="@string/pill_access" />
+                    <TextView
+                        android:id="@+id/sectionLog"
+                        style="@style/SectionLabel"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="24dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/section_log" />
 
-                        <TextView
-                            android:id="@+id/pillBind"
-                            style="@style/Pill"
-                            android:layout_width="0dp"
-                            android:layout_marginStart="7dp"
-                            android:layout_weight="1"
-                            android:background="@drawable/bg_pill_neutral"
-                            android:ellipsize="end"
-                            android:maxLines="1"
-                            android:text="@string/pill_bind" />
+                    <cn.luohui.mpguard.GlassCardView
+                        android:id="@+id/logCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        app:glassCornerRadius="22dp">
 
-                        <TextView
-                            android:id="@+id/pillHeal"
-                            style="@style/Pill"
-                            android:layout_width="0dp"
-                            android:layout_marginStart="7dp"
-                            android:layout_weight="1"
-                            android:background="@drawable/bg_pill_neutral"
-                            android:ellipsize="end"
-                            android:maxLines="1"
-                            android:text="@string/pill_heal" />
-                    </LinearLayout>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/lastAction"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-medium"
+                                android:lineSpacingExtra="1dp"
+                                android:text="@string/log_waiting"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13.5sp" />
+
+                            <TextView
+                                android:id="@+id/lastActionTime"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="5dp"
+                                android:text="@string/log_auto"
+                                android:textColor="@color/text_muted"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </cn.luohui.mpguard.GlassCardView>
                 </LinearLayout>
-            </FrameLayout>
+            </ScrollView>
 
-            <LinearLayout
-                android:id="@+id/sectionTargets"
+            <ScrollView
+                android:id="@+id/systemScroll"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
-                android:layout_marginBottom="12dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    style="@style/SectionTitle"
-                    android:text="@string/section_targets" />
-
-                <Space
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    style="@style/SectionCode"
-                    android:text="@string/section_targets_code" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/targetsContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-
-            <LinearLayout
-                android:id="@+id/sectionConditions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
-                android:layout_marginBottom="12dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    style="@style/SectionTitle"
-                    android:text="@string/section_conditions" />
-
-                <Space
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    style="@style/SectionCode"
-                    android:text="@string/section_conditions_code" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/conditionsCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:divider="@drawable/divider_soft"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="4dp"
-                android:showDividers="middle" />
-
-            <LinearLayout
-                android:id="@+id/sectionUpdate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
-                android:layout_marginBottom="12dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    style="@style/SectionTitle"
-                    android:text="@string/section_update" />
-
-                <Space
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    style="@style/SectionCode"
-                    android:text="@string/section_update_code" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/updateCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingTop="13dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="13dp">
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:fillViewport="true"
+                android:overScrollMode="never"
+                android:paddingBottom="112dp"
+                android:scrollbars="none"
+                android:visibility="gone">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:paddingStart="20dp"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="20dp"
+                    android:paddingBottom="16dp">
 
                     <TextView
-                        android:id="@+id/updateVersion"
-                        android:layout_width="wrap_content"
+                        android:id="@+id/sectionConditions"
+                        style="@style/SectionLabel"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/section_conditions" />
+
+                    <cn.luohui.mpguard.GlassCardView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="@string/update_current"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13sp" />
+                        android:paddingStart="16dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="2dp"
+                        app:glassCornerRadius="24dp">
+
+                        <LinearLayout
+                            android:id="@+id/conditionsCard"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:divider="@drawable/divider_soft"
+                            android:orientation="vertical"
+                            android:showDividers="middle" />
+                    </cn.luohui.mpguard.GlassCardView>
 
                     <TextView
-                        android:id="@+id/updateHint"
-                        android:layout_width="wrap_content"
+                        android:id="@+id/sectionUpdate"
+                        style="@style/SectionLabel"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="24dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/section_update" />
+
+                    <cn.luohui.mpguard.GlassCardView
+                        android:id="@+id/updateCard"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:maxLines="2"
-                        android:text="@string/update_hint"
-                        android:textColor="@color/text_muted"
-                        android:textSize="11sp" />
+                        android:padding="16dp"
+                        app:glassCornerRadius="24dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/updateVersion"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:text="@string/update_current"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13.5sp" />
+
+                                <TextView
+                                    android:id="@+id/updateHint"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:lineSpacingExtra="1dp"
+                                    android:maxLines="2"
+                                    android:text="@string/update_hint"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/btnUpdate"
+                                android:layout_width="wrap_content"
+                                android:layout_height="40dp"
+                                android:layout_marginStart="12dp"
+                                android:background="@drawable/bg_btn_ghost"
+                                android:clickable="true"
+                                android:drawableStart="@drawable/ic_refresh"
+                                android:drawablePadding="5dp"
+                                android:drawableTint="@color/text_secondary"
+                                android:focusable="true"
+                                android:fontFamily="sans-serif-medium"
+                                android:gravity="center"
+                                android:minWidth="96dp"
+                                android:paddingStart="14dp"
+                                android:paddingEnd="14dp"
+                                android:text="@string/btn_update"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12.5sp" />
+                        </LinearLayout>
+                    </cn.luohui.mpguard.GlassCardView>
+
+                    <TextView
+                        android:id="@+id/sectionControl"
+                        style="@style/SectionLabel"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="24dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/section_control" />
+
+                    <cn.luohui.mpguard.GlassCardView
+                        android:id="@+id/controlCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        app:glassCornerRadius="24dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="sans-serif-medium"
+                                        android:text="@string/control_title"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="13.5sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="4dp"
+                                        android:text="@string/control_sub"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="11sp" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:id="@+id/btnToggle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="38dp"
+                                    android:layout_marginStart="12dp"
+                                    android:background="@drawable/bg_btn_ghost"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:gravity="center"
+                                    android:minWidth="88dp"
+                                    android:paddingStart="14dp"
+                                    android:paddingEnd="14dp"
+                                    android:text="@string/btn_disable"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="12.5sp" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginTop="14dp"
+                                android:background="@color/stroke_soft" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:text="@string/privacy_note"
+                                android:textColor="@color/text_muted"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </cn.luohui.mpguard.GlassCardView>
                 </LinearLayout>
+            </ScrollView>
+        </FrameLayout>
+    </LinearLayout>
 
-                <TextView
-                    android:id="@+id/btnUpdate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="42dp"
-                    android:layout_marginStart="12dp"
-                    android:background="@drawable/bg_btn_ghost"
-                    android:clickable="true"
-                    android:drawableStart="@drawable/ic_refresh"
-                    android:drawablePadding="6dp"
-                    android:drawableTint="@color/text_secondary"
-                    android:focusable="true"
-                    android:fontFamily="sans-serif-medium"
-                    android:gravity="center"
-                    android:minWidth="96dp"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:text="@string/btn_update"
-                    android:textColor="@color/text_primary"
-                    android:textSize="12.5sp" />
-            </LinearLayout>
+    <View
+        android:id="@+id/dockScrim"
+        android:layout_width="match_parent"
+        android:layout_height="176dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_dock_scrim"
+        android:clickable="false"
+        android:focusable="false" />
 
-            <LinearLayout
-                android:id="@+id/sectionLog"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
-                android:layout_marginBottom="12dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    style="@style/SectionTitle"
-                    android:text="@string/section_log" />
-
-                <Space
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    style="@style/SectionCode"
-                    android:text="@string/section_log_code" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/logCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_log"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="14dp">
-
-                <View
-                    android:layout_width="3dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/bg_log_mark" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/lastAction"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="@string/log_waiting"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/lastActionTime"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="3dp"
-                        android:fontFamily="@font/rajdhani_medium"
-                        android:letterSpacing="0.08"
-                        android:text="@string/log_auto"
-                        android:textColor="@color/text_muted"
-                        android:textSize="10sp" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/footer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/privacy_note"
-                    android:textColor="@color/text_muted"
-                    android:textSize="11sp" />
-
-                <Space
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    android:id="@+id/btnToggle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="?android:attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:fontFamily="sans-serif-medium"
-                    android:paddingStart="10dp"
-                    android:paddingTop="8dp"
-                    android:paddingEnd="10dp"
-                    android:paddingBottom="8dp"
-                    android:text="@string/btn_disable"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-            </LinearLayout>
-        </LinearLayout>
-    </ScrollView>
-
-    <FrameLayout
+    <cn.luohui.mpguard.GlassCardView
+        android:id="@+id/dock"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="@drawable/bg_bottom_bar"
-        android:paddingStart="20dp"
-        android:paddingTop="28dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="16dp">
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="14dp"
+        android:elevation="8dp"
+        android:padding="8dp"
+        app:glassCornerRadius="33dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -504,7 +593,7 @@
             <LinearLayout
                 android:id="@+id/btnRearm"
                 android:layout_width="0dp"
-                android:layout_height="54dp"
+                android:layout_height="50dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_btn_primary"
                 android:clickable="true"
@@ -525,7 +614,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="5dp"
                     android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.04"
+                    android:letterSpacing="0.02"
                     android:text="@string/btn_heal"
                     android:textColor="@color/ink"
                     android:textSize="15sp" />
@@ -534,14 +623,14 @@
             <TextView
                 android:id="@+id/btnCheck"
                 android:layout_width="wrap_content"
-                android:layout_height="54dp"
-                android:layout_marginStart="10dp"
+                android:layout_height="50dp"
+                android:layout_marginStart="8dp"
                 android:background="@drawable/bg_btn_ghost"
                 android:clickable="true"
                 android:focusable="true"
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center"
-                android:minWidth="72dp"
+                android:minWidth="68dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
                 android:text="@string/btn_check"
@@ -550,14 +639,14 @@
 
             <ImageButton
                 android:id="@+id/btnJump"
-                android:layout_width="54dp"
-                android:layout_height="54dp"
-                android:layout_marginStart="10dp"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginStart="8dp"
                 android:background="@drawable/bg_btn_ghost"
                 android:contentDescription="@string/btn_settings"
-                android:padding="15dp"
+                android:padding="14dp"
                 android:src="@drawable/ic_tune"
                 android:tint="@color/text_secondary" />
         </LinearLayout>
-    </FrameLayout>
+    </cn.luohui.mpguard.GlassCardView>
 </FrameLayout>

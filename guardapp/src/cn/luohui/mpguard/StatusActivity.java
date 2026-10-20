@@ -11,8 +11,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -23,12 +25,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityManager;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -40,10 +45,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
-/** 车控守护仪表盘：守护指数、双目标遥测、系统条件与一键操作。 */
+/** 车控守护控制台：磨砂玻璃双页签，概览守护状态，系统页处理条件与更新。 */
 public class StatusActivity extends Activity implements View.OnClickListener {
 
     private static final String UI_PREFS = "guard_ui";
+    private static final float GLASS_SCALE = 0.25f;
 
     private int C_OK;
     private int C_WARN;
@@ -51,6 +57,19 @@ public class StatusActivity extends Activity implements View.OnClickListener {
     private int C_MUTED;
     private int C_TEXT;
     private int C_TEXT2;
+
+    private View rootView;
+    private View backdropView;
+    private View headerWrap;
+    private View segmented;
+    private View segIndicator;
+    private TextView tabOverview;
+    private TextView tabSystem;
+    private ScrollView overviewScroll;
+    private ScrollView systemScroll;
+    private View dock;
+    private Bitmap glassBitmap;
+    private boolean systemTab;
 
     private View headerPill;
     private View headerDot;
@@ -98,8 +117,8 @@ public class StatusActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        applyWindowChrome();
         setContentView(R.layout.activity_status);
+        applyWindowChrome();
 
         C_OK = getColor(R.color.accent);
         C_WARN = getColor(R.color.warn);
@@ -113,6 +132,8 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         setupTargets();
         setupConditions();
         setupClicks();
+        setupTabs();
+        applyInsets();
         updateVersion.setText(getString(R.string.update_current, UpdateChecker.currentVersion(this)));
         loadLastAction();
         startPulse();
@@ -129,9 +150,20 @@ public class StatusActivity extends Activity implements View.OnClickListener {
 
         render(true);
         playEntrance();
+        installGlass();
     }
 
     private void bindViews() {
+        rootView = findViewById(R.id.root);
+        backdropView = findViewById(R.id.backdrop);
+        headerWrap = findViewById(R.id.headerWrap);
+        segmented = findViewById(R.id.segmented);
+        segIndicator = findViewById(R.id.segIndicator);
+        tabOverview = (TextView) findViewById(R.id.tabOverview);
+        tabSystem = (TextView) findViewById(R.id.tabSystem);
+        overviewScroll = (ScrollView) findViewById(R.id.overviewScroll);
+        systemScroll = (ScrollView) findViewById(R.id.systemScroll);
+        dock = findViewById(R.id.dock);
         headerPill = findViewById(R.id.headerPill);
         headerDot = findViewById(R.id.headerDot);
         headerStatus = (TextView) findViewById(R.id.headerStatus);
@@ -163,7 +195,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         svenCard = new TargetCard(svenView);
         svenCard.icon.setImageResource(R.drawable.ic_cast);
         svenCard.name.setText(R.string.target_sven);
-        svenCard.pkg.setText("com.sven.mycar");
+        svenCard.pkg.setText(R.string.target_sven_sub);
         svenCard.action.setVisibility(View.GONE);
         targetsContainer.addView(svenView);
 
@@ -174,7 +206,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         netaCard = new TargetCard(netaView);
         netaCard.icon.setImageResource(R.drawable.ic_bolt);
         netaCard.name.setText(R.string.target_neta);
-        netaCard.pkg.setText(NetaKeeper.PKG);
+        netaCard.pkg.setText(R.string.target_neta_sub);
         netaCard.action.setVisibility(View.VISIBLE);
         netaCard.action.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { rebindNeta(); }
@@ -183,9 +215,18 @@ public class StatusActivity extends Activity implements View.OnClickListener {
     }
 
     private void setupConditions() {
-        String[] titles = {"无障碍总开关", "自愈权限", "持久体检", "电池优化豁免"};
-        String[] subs = {"ACCESSIBILITY MASTER", "WRITE_SECURE_SETTINGS",
-                "DUAL ALARM 10 MIN · JOB 15 MIN", "DOZE WHITELIST"};
+        String[] titles = {
+                getString(R.string.cond_access_title),
+                getString(R.string.cond_perm_title),
+                getString(R.string.cond_keep_title),
+                getString(R.string.cond_battery_title)
+        };
+        String[] subs = {
+                getString(R.string.cond_access_sub),
+                getString(R.string.cond_perm_sub),
+                getString(R.string.cond_keep_sub),
+                getString(R.string.cond_battery_sub)
+        };
         LayoutInflater inf = LayoutInflater.from(this);
         for (int i = 0; i < titles.length; i++) {
             View v = inf.inflate(R.layout.item_condition, conditionsContainer, false);
@@ -235,6 +276,146 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         btnUpdate.setOnClickListener(this);
     }
 
+    private void setupTabs() {
+        tabOverview.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { selectTab(false, true); }
+        });
+        tabSystem.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { selectTab(true, true); }
+        });
+        segmented.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override public void onLayoutChange(View v, int left, int top, int right, int bottom,
+                                                 int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                layoutIndicator(false);
+            }
+        });
+        selectTab(false, false);
+    }
+
+    private void selectTab(boolean showSystem, boolean animate) {
+        boolean changed = systemTab != showSystem;
+        systemTab = showSystem;
+        layoutIndicator(animate && changed);
+
+        tabOverview.setTextColor(getColor(showSystem ? R.color.text_secondary : R.color.text_primary));
+        tabSystem.setTextColor(getColor(showSystem ? R.color.text_primary : R.color.text_secondary));
+
+        final ScrollView entering = showSystem ? systemScroll : overviewScroll;
+        ScrollView leaving = showSystem ? overviewScroll : systemScroll;
+        leaving.animate().cancel();
+        leaving.setVisibility(View.GONE);
+        leaving.setAlpha(1f);
+        leaving.setTranslationX(0f);
+
+        entering.animate().cancel();
+        entering.setVisibility(View.VISIBLE);
+        if (animate && changed) {
+            entering.setAlpha(0f);
+            entering.setTranslationX(dp(showSystem ? 14 : -14));
+            entering.animate()
+                    .alpha(1f)
+                    .translationX(0f)
+                    .setDuration(280)
+                    .setInterpolator(new DecelerateInterpolator(1.4f))
+                    .start();
+        } else {
+            entering.setAlpha(1f);
+            entering.setTranslationX(0f);
+        }
+    }
+
+    private void layoutIndicator(boolean animate) {
+        if (segmented == null || segIndicator == null) return;
+        int inner = segmented.getWidth() - segmented.getPaddingLeft() - segmented.getPaddingRight();
+        if (inner <= 0) return;
+        int half = inner / 2;
+        if (segIndicator.getWidth() != half) {
+            ViewGroup.LayoutParams lp = segIndicator.getLayoutParams();
+            lp.width = half;
+            segIndicator.setLayoutParams(lp);
+        }
+        float target = systemTab ? half : 0f;
+        segIndicator.animate().cancel();
+        if (animate) {
+            segIndicator.animate()
+                    .translationX(target)
+                    .setDuration(280)
+                    .setInterpolator(new DecelerateInterpolator(1.4f))
+                    .start();
+        } else {
+            segIndicator.setTranslationX(target);
+        }
+    }
+
+    private void applyInsets() {
+        final int side = dp(20);
+        final int headerTop = dp(10);
+        final int dockSide = dp(16);
+        final int dockBottom = dp(14);
+        final int scrollBottom = dp(112);
+        rootView.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @Override public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                int top;
+                int bottom;
+                int left;
+                int right;
+                if (Build.VERSION.SDK_INT >= 30) {
+                    android.graphics.Insets bars = insets.getInsets(
+                            WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                    top = bars.top;
+                    bottom = bars.bottom;
+                    left = bars.left;
+                    right = bars.right;
+                } else {
+                    top = insets.getSystemWindowInsetTop();
+                    bottom = insets.getSystemWindowInsetBottom();
+                    left = insets.getSystemWindowInsetLeft();
+                    right = insets.getSystemWindowInsetRight();
+                }
+                headerWrap.setPadding(side + left, headerTop + top, side + right, 0);
+                overviewScroll.setPadding(left, 0, right, scrollBottom + bottom);
+                systemScroll.setPadding(left, 0, right, scrollBottom + bottom);
+                ViewGroup.MarginLayoutParams lp =
+                        (ViewGroup.MarginLayoutParams) dock.getLayoutParams();
+                lp.leftMargin = dockSide + left;
+                lp.rightMargin = dockSide + right;
+                lp.bottomMargin = dockBottom + bottom;
+                dock.setLayoutParams(lp);
+                return insets;
+            }
+        });
+        rootView.requestApplyInsets();
+    }
+
+    private void installGlass() {
+        rootView.post(new Runnable() {
+            @Override public void run() {
+                if (isFinishing() || isDestroyed()) return;
+                if (backdropView.getWidth() <= 0 || backdropView.getHeight() <= 0) {
+                    rootView.postDelayed(this, 80);
+                    return;
+                }
+                glassBitmap = GlassCardView.blurBackdrop(backdropView, GLASS_SCALE, 7);
+                int[] origin = new int[2];
+                backdropView.getLocationInWindow(origin);
+                applyGlass(rootView, origin[0], origin[1]);
+            }
+        });
+    }
+
+    private void applyGlass(View view, int originX, int originY) {
+        if (view instanceof GlassCardView) {
+            ((GlassCardView) view).setBackdrop(glassBitmap, GLASS_SCALE, originX, originY);
+            return;
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                applyGlass(group.getChildAt(i), originX, originY);
+            }
+        }
+    }
+
     private void autoRepairIfNeeded() {
         if (!Rearm.hasWritePerm(this)) return;
         String list = Rearm.readList(this);
@@ -269,13 +450,30 @@ public class StatusActivity extends Activity implements View.OnClickListener {
     private void applyWindowChrome() {
         Window w = getWindow();
         w.setBackgroundDrawable(new ColorDrawable(getColor(R.color.bg)));
-        w.setStatusBarColor(getColor(R.color.bg));
-        w.setNavigationBarColor(getColor(R.color.bg));
-        int flags = View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-        if (!ThemePrefs.isNight(this)) {
-            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        w.setStatusBarColor(Color.TRANSPARENT);
+        w.setNavigationBarColor(Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= 29) {
+            w.setNavigationBarContrastEnforced(false);
         }
-        w.getDecorView().setSystemUiVisibility(flags);
+        boolean lightBars = !ThemePrefs.isNight(this);
+        if (Build.VERSION.SDK_INT >= 30) {
+            w.setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = w.getInsetsController();
+            if (controller != null) {
+                int mask = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                        | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                controller.setSystemBarsAppearance(lightBars ? mask : 0, mask);
+            }
+        } else {
+            int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
+            if (lightBars) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                        | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            }
+            w.getDecorView().setSystemUiVisibility(flags);
+        }
     }
 
     private void applyThemeIcon() {
@@ -717,7 +915,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
             sub = "在系统设置中重新启用本服务";
         } else if (!netaInstalled) {
             headline = "未检测到哪吒汽车";
-            sub = "安装并登录后即可自动接入守护";
+            sub = "安装登录后自动接入守护";
         } else if (!netaBound) {
             headline = "哪吒通道正在重连";
             sub = "保持 MQTT 服务绑定 · 自动恢复进程优先级";
@@ -777,7 +975,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
                     selfLoaded ? "自动放行" : "未接管",
                     selfLoaded ? C_OK : C_MUTED);
             int clicks = GuardService.clickedCount();
-            svenCard.setRow(2, "本次运行", clicks + " 次放行", clicks > 0 ? C_OK : C_MUTED);
+            svenCard.setRow(2, "本次运行", clicks + " 次", clicks > 0 ? C_OK : C_MUTED);
             String pt;
             int pc;
             if (svenLoaded) { pt = "守护中"; pc = C_OK; }
@@ -805,24 +1003,24 @@ public class StatusActivity extends Activity implements View.OnClickListener {
             applyPill(netaCard.pill, pt, pc);
 
             netaCard.setRow(0, "MQTT 绑定",
-                    off ? "已暂停" : (netaBound ? "已连接 · 自动重连"
-                            : (netaRunning ? "绑定中 · 稍候重试" : "未启动")),
+                    off ? "已暂停" : (netaBound ? "已连接"
+                            : (netaRunning ? "绑定中" : "未启动")),
                     off ? C_MUTED : (netaBound ? C_OK : C_WARN));
 
             long hb = NetaKeeper.lastHeartbeatAt();
             String hbText;
             int hbColor;
             if (off) { hbText = "已暂停"; hbColor = C_MUTED; }
-            else if (hb <= 0) { hbText = "待发送 · 每 2 分钟"; hbColor = C_WARN; }
+            else if (hb <= 0) { hbText = "待发送"; hbColor = C_WARN; }
             else {
-                hbText = ago(hb) + " · 每 2 分钟";
+                hbText = ago(hb);
                 hbColor = System.currentTimeMillis() - hb <= 3 * 60_000L ? C_OK : C_WARN;
             }
             netaCard.setRow(1, "心跳唤醒", hbText, hbColor);
 
             boolean armed = RearmAlarm.isArmed();
             netaCard.setRow(2, "双路闹钟",
-                    off ? "已暂停" : (armed ? "已布防 · 每 10 分钟" : "未布防"),
+                    off ? "已暂停" : (armed ? "已布防" : "未布防"),
                     off ? C_MUTED : (armed ? C_OK : C_WARN));
         }
 
@@ -835,7 +1033,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         else { accessValue = "已开启"; accessState = 0; }
         setCond(0, accessValue, accessState);
         setCond(1, perm ? "已授予" : "需 ADB", perm ? 0 : 2);
-        setCond(2, job ? "10 分钟双路兜底" : "未登记", job ? 0 : 1);
+        setCond(2, job ? "双路兜底" : "未登记", job ? 0 : 1);
 
         int dozeTotal = 0;
         int dozeOk = 0;
@@ -973,7 +1171,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
             lastActionTime.setText(R.string.log_auto);
             return;
         }
-        String time = new SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault())
+        String time = new SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
                 .format(new Date(at));
         lastActionTime.setText(time + "  ·  手动操作");
     }
@@ -991,26 +1189,23 @@ public class StatusActivity extends Activity implements View.OnClickListener {
     private void playEntrance() {
         View[] views = {
                 findViewById(R.id.header),
+                segmented,
                 findViewById(R.id.heroCard),
                 findViewById(R.id.sectionTargets),
                 targetsContainer,
-                findViewById(R.id.sectionConditions),
-                conditionsContainer,
-                findViewById(R.id.sectionUpdate),
-                findViewById(R.id.updateCard),
                 findViewById(R.id.sectionLog),
                 findViewById(R.id.logCard),
-                findViewById(R.id.footer)
+                dock
         };
         for (int i = 0; i < views.length; i++) {
             View v = views[i];
             if (v == null) continue;
             v.setAlpha(0f);
-            v.setTranslationY(dp(14));
+            v.setTranslationY(dp(i < 2 ? 10 : 16));
             v.animate()
                     .alpha(1f)
                     .translationY(0f)
-                    .setStartDelay(40L + i * 55L)
+                    .setStartDelay(30L + i * 45L)
                     .setDuration(430)
                     .setInterpolator(new DecelerateInterpolator(1.5f))
                     .start();
@@ -1028,7 +1223,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
         GuardWidgetProvider.refresh(this);
         if (refresher == null) refresher = new Refresher(this);
         h.removeCallbacks(refresher);
-        h.postDelayed(refresher, 3000);
+        h.postDelayed(refresher, 1200);
 
         if (installLaunched) {
             installLaunched = false;
@@ -1061,6 +1256,7 @@ public class StatusActivity extends Activity implements View.OnClickListener {
     protected void onDestroy() {
         if (pulse != null) pulse.cancel();
         h.removeCallbacksAndMessages(null);
+        glassBitmap = null;
         super.onDestroy();
     }
 

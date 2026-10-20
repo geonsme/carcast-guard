@@ -41,16 +41,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:fontFamily="@font/rajdhani_medium"
-            android:letterSpacing="0.05"
+            android:letterSpacing="0.01"
             android:textColor="@color/text_muted"
-            android:textSize="10sp" />
+            android:textSize="10.5sp" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/condValue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
         android:fontFamily="sans-serif-medium"
         android:textColor="@color/text_primary"
         android:textSize="12sp" />
