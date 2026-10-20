@@ -63,7 +63,7 @@
     <color name="backdrop_warm_inner">#12FFB74D</color>
     <color name="backdrop_warm_outer">#00FFB74D</color>
 
-    <!-- 固定配色：桌面磁贴与图标不随应用主题变化 -->
+    <!-- 固定配色：桌面磁贴与图标不随应用主题变化；磁贴 98% 透明，前景沿用高亮色 -->
     <color name="ic_launcher_background">#1E2022</color>
     <color name="guard_green_start">#84D87B</color>
     <color name="guard_green_mid">#BAF974</color>

@@ -70,7 +70,7 @@
 │   │   └── StatusActivity.java    # 状态页：守护指数/目标卡/系统条件/动作
 │   ├── build.sh                   # 跨平台构建：本地 Windows / Actions Linux
 │   ├── render_preview.js          # 图标矢量栅格化预览
-│   └── mp-guard.apk               # 已签名成品（v1.18，约 0.52 MB，含字体）
+│   └── mp-guard.apk               # 已签名成品（v1.19，约 0.52 MB，含字体）
 ├── mp_guard.sh                    # shell 级兜底守护（设备端，需 adb）
 ├── rearm.sh                       # 电脑端一条命令恢复（含哪吒钉权）
 ├── verify_after_reboot.sh         # 重启后逐项核对（双通道 38 项）
@@ -83,7 +83,8 @@
 
 ## 3. 车控守护 App
 
-包名 `cn.luohui.mpguard`，自签，约 0.52 MB。v1.18 把桌面磁贴改为 2×2，并在右上角显示最近更新时间；
+包名 `cn.luohui.mpguard`，自签，约 0.52 MB。v1.19 把桌面磁贴底色改成 98% 透明度的白色；
+v1.18 把桌面磁贴改为 2×2，并在右上角显示最近更新时间；
 v1.17 移除更新检查对 GitHub API 配额的依赖，并加入更新镜像与结果缓存；
 v1.16 加入应用内明暗主题切换，并修正底部动作按钮的图标与文字间距；
 v1.15 新增应用内更新与 ColorOS 标准磁贴；
@@ -162,13 +163,14 @@ GuardService（系统绑定，常驻）
 - **交互**：每 3 秒自动刷新；「立即自愈」「检测」「重绑哪吒」「停用/启用守护」均有 Toast + 事件日志 + 整页重算
 - **权限引导**：缺 `WRITE_SECURE_SETTINGS` 时弹出可复制的 ADB 命令，不把用户丢进设置页
 
-### 3.5 桌面 2×2 状态磁贴（v1.18 起）
+### 3.5 桌面 2×2 状态磁贴（v1.18 起，v1.19 近乎全透明）
 
 `GuardWidgetProvider` 提供一个标准 App Widget，固定占桌面 **2×2** 格：中央是放大的盾牌图标 + 一行状态，
 右上角用 10sp 灰色小字显示最近一轮刷新时间（`HH:mm`，24 小时制，不显示日期和秒）；点击任意位置进入控制台。
-背景保持 90% 不透明度，透出少量壁纸。
+背景为 **98% 透明度的白色**（`#05FFFFFF`，即 2% 白色蒙层），保留 18dp 圆角，不再画边框；视觉上基本只看到图标、状态和时间浮在壁纸上。
 
 - 状态优先级：已停用（灰）→ 待授权（珊瑚）→ 待激活（珊瑚）→ 仅投屏（琥珀）→ 重连中（琥珀）→ 守护中（柠檬绿）。
+  前景沿用固定高亮色（`#C7F86F` / `#FFC46B` / `#FF7A6B` / `#99A49E`），不随主题变化；因底色几乎全透明，实际可读性会受壁纸明暗影响。
 - 刷新：系统 `updatePeriodMillis` 每 30 分钟一次；App 内每次状态重绘、自愈、启停、重绑，以及哪吒绑定连上/断开时都会主动 `refresh()`。
   右上角时间是**最近一次刷新（状态重算）的时刻**，不是实时跳动的时钟；系统节流或 Doze 下时间会停在上一轮，正好可用来判断磁贴是否新鲜。
 - 添加方式：长按桌面空白处 → 「卡片」→ 在「全部卡片」里找到「车控守护」添加（卡片中心搜索按中文匹配，拼音搜不到）。
@@ -202,7 +204,7 @@ GuardService（系统绑定，常驻）
   `createConfigurationContext` 覆盖 `Configuration.uiMode` 的 `NIGHT_*` 位，再配合 `values-night/colors.xml`
   让全部颜色资源按主题解析；切换后 `recreate()` 并淡入淡出。
 - 状态栏/导航栏颜色与图标明暗随主题同步；`BackdropView`、`ProtectionGaugeView` 改为从颜色资源取色。
-- 桌面 2×2 磁贴固定使用 `widget_*` 常量色，保持暗色外观，不随主题变化。
+- 桌面 2×2 磁贴固定使用 `widget_*` 常量色（98% 透明白底 + 高亮前景），不随应用主题变化。
 - 更新下载/安装进行中禁止切换主题，避免重建 Activity 丢失安装回执。
 - 底部「立即自愈」按钮由 `TextView` 复合 drawable 改为 `LinearLayout` 包 `ImageView + TextView`，
   图标与文字间距 5dp 并整体居中；此前 `drawableStart` 会把图标钉在按钮左缘、文字单独居中。
@@ -342,8 +344,8 @@ adb shell am set-standby-bucket com.hezhong.nezha 5
 （`platforms;android-33` + `build-tools;33.0.1`），直接调用同一个 `guardapp/build.sh`。
 
 - **每次 push**（任意分支）：构建 APK，上传为 Actions artifact，命名 `mp-guard-<短 SHA>.apk`。
-- **打 tag**（`v1.18`、`v1.18.1`）：额外创建 GitHub Release，附件为 `mp-guard-<tag>.apk`，
-  并用 tag 自动改写 `versionName` 与 `versionCode`（`1.18` → `11800`），无需手工改 Manifest。
+- **打 tag**（`v1.19`、`v1.19.1`）：额外创建 GitHub Release，附件为 `mp-guard-<tag>.apk`，
+  并用 tag 自动改写 `versionName` 与 `versionCode`（`1.19` → `11900`），无需手工改 Manifest。
 - 仓库必须为 **public**：App 内更新以匿名身份读取 `releases/latest` 和下载附件；私有仓库会 404。
   Release 不能是 draft / prerelease，否则不会被 `latest` 返回。
 - 更新包由 App 校验签名；CI 必须继续使用同一把 keystore，否则会被拒绝安装。
@@ -351,7 +353,7 @@ adb shell am set-standby-bucket com.hezhong.nezha 5
   - `MPGUARD_KS_BASE64`：`guardapp/mpguard.ks` 的 Base64
   - `MPGUARD_KS_PASS` / `MPGUARD_KEY_PASS`：keystore 与 key 密码
   - `MPGUARD_KEY_ALIAS` 可选，默认 `mpguard`
-- 触发发布：`git tag v1.18 && git push origin v1.18`。
+- 触发发布：`git tag v1.19 && git push origin v1.19`。
 
 ## 7. 已知限制
 
